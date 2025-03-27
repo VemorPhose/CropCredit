@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { Eye, EyeOff } from "lucide-react";
+import { supabase } from "../../lib/supabase";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -40,15 +41,52 @@ const Register = () => {
     setIsLoading(true);
 
     try {
-      await register(
-        formData.name,
-        formData.email,
-        formData.password,
-        formData.role
+      // Register with Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            name: formData.name,
+            role: formData.role,
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) throw error;
+
+      // Add user details to database immediately
+      const { error: createError } = await supabase.from("users").insert([
+        {
+          id: data.user.id,
+          email: formData.email,
+          name: formData.name,
+          role: formData.role,
+        },
+      ]);
+
+      if (createError) throw createError;
+
+      // Create role-specific profile
+      if (formData.role === "farmer") {
+        await supabase
+          .from("farmer_profiles")
+          .insert([{ user_id: data.user.id }]);
+      } else if (formData.role === "lender") {
+        await supabase
+          .from("lender_profiles")
+          .insert([{ user_id: data.user.id }]);
+      }
+
+      // Show success message
+      alert(
+        "Registration successful! Please check your email for confirmation link."
       );
       navigate("/");
     } catch (err) {
-      setError("Registration failed. Please try again.");
+      console.error("Registration error:", err);
+      setError(err.message || "Registration failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
