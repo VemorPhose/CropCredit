@@ -41,7 +41,7 @@ const Register = () => {
     setIsLoading(true);
 
     try {
-      // Register with Supabase Auth
+      // Register with Supabase Auth with user metadata
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -49,6 +49,8 @@ const Register = () => {
           data: {
             name: formData.name,
             role: formData.role,
+            // Store initial user data in metadata
+            initial_setup_needed: true,
           },
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
@@ -56,34 +58,11 @@ const Register = () => {
 
       if (error) throw error;
 
-      // Add user details to database immediately
-      const { error: createError } = await supabase.from("users").insert([
-        {
-          id: data.user.id,
-          email: formData.email,
-          name: formData.name,
-          role: formData.role,
-        },
-      ]);
-
-      if (createError) throw createError;
-
-      // Create role-specific profile
-      if (formData.role === "farmer") {
-        await supabase
-          .from("farmer_profiles")
-          .insert([{ user_id: data.user.id }]);
-      } else if (formData.role === "lender") {
-        await supabase
-          .from("lender_profiles")
-          .insert([{ user_id: data.user.id }]);
-      }
-
       // Show success message
       alert(
         "Registration successful! Please check your email for confirmation link."
       );
-      navigate("/");
+      navigate("/login");
     } catch (err) {
       console.error("Registration error:", err);
       setError(err.message || "Registration failed. Please try again.");

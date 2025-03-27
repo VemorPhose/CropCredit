@@ -15,9 +15,37 @@ const AuthCallback = () => {
 
         if (error) throw error;
 
-        if (user) {
-          navigate("/login?confirmed=true");
+        if (user && user.user_metadata.initial_setup_needed) {
+          // Now the user is authenticated, create the user record
+          const { error: createError } = await supabase.from("users").insert([
+            {
+              id: user.id,
+              email: user.email,
+              name: user.user_metadata.name,
+              role: user.user_metadata.role,
+            },
+          ]);
+
+          if (createError) throw createError;
+
+          // Create role-specific profile
+          if (user.user_metadata.role === "farmer") {
+            await supabase
+              .from("farmer_profiles")
+              .insert([{ user_id: user.id }]);
+          } else if (user.user_metadata.role === "lender") {
+            await supabase
+              .from("lender_profiles")
+              .insert([{ user_id: user.id }]);
+          }
+
+          // Update user metadata to indicate setup is complete
+          await supabase.auth.updateUser({
+            data: { initial_setup_needed: false },
+          });
         }
+
+        navigate("/login?confirmed=true");
       } catch (error) {
         console.error("Error handling confirmation:", error);
         navigate("/login?error=confirmation-failed");
