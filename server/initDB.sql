@@ -122,6 +122,28 @@ CREATE TABLE loan_repayments (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Credit evaluations table for storing credit analysis results
+CREATE TABLE credit_evaluations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+    credit_score DECIMAL(5, 2),
+    algorithm_version VARCHAR(50),
+    input_data JSONB,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Chatbot interactions table for storing conversation history
+CREATE TABLE chatbot_interactions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+    message TEXT NOT NULL,
+    response TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Initial seed data for government schemes
 INSERT INTO government_schemes (name, description, eligibility, benefits, category) VALUES
 ('PM-KISAN', 'Pradhan Mantri Kisan Samman Nidhi provides income support of ₹6,000 per year to all farmer families across the country in three equal installments of ₹2,000 each every four months.', 'All farmer families with cultivable land.', 'Direct income support of ₹6,000 per year.', 'Income Support'),
@@ -151,6 +173,8 @@ CREATE TRIGGER update_government_schemes_modtime BEFORE UPDATE ON government_sch
 CREATE TRIGGER update_farmer_scheme_eligibility_modtime BEFORE UPDATE ON farmer_scheme_eligibility FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
 CREATE TRIGGER update_risk_factors_modtime BEFORE UPDATE ON risk_factors FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
 CREATE TRIGGER update_loan_repayments_modtime BEFORE UPDATE ON loan_repayments FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+CREATE TRIGGER update_credit_evaluations_modtime BEFORE UPDATE ON credit_evaluations FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+CREATE TRIGGER update_chatbot_interactions_modtime BEFORE UPDATE ON chatbot_interactions FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
 
 -- Enable Row Level Security (RLS) for all tables
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
@@ -163,6 +187,8 @@ ALTER TABLE government_schemes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE farmer_scheme_eligibility ENABLE ROW LEVEL SECURITY;
 ALTER TABLE risk_factors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE loan_repayments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE credit_evaluations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE chatbot_interactions ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for users table
 CREATE POLICY "Users can view their own user record" ON users
@@ -346,4 +372,30 @@ CREATE POLICY "Lenders can update loan repayment status" ON loan_repayments
     SELECT 1 FROM loan_approvals
     JOIN lender_profiles ON loan_approvals.lender_id = lender_profiles.id
     WHERE loan_approvals.loan_id = loan_id AND lender_profiles.user_id = auth.uid()
-  )); 
+  ));
+
+-- RLS Policies for credit_evaluations table
+CREATE POLICY "Users can view their own credit evaluations" ON credit_evaluations
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own credit evaluations" ON credit_evaluations
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own credit evaluations" ON credit_evaluations
+    FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Lenders can view credit evaluations" ON credit_evaluations
+    FOR SELECT USING (EXISTS (
+        SELECT 1 FROM users 
+        WHERE users.id = auth.uid() AND users.role = 'lender'
+    ));
+
+-- RLS Policies for chatbot_interactions table
+CREATE POLICY "Users can view their own chat interactions" ON chatbot_interactions
+    FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own chat interactions" ON chatbot_interactions
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own chat interactions" ON chatbot_interactions
+    FOR UPDATE USING (auth.uid() = user_id);
