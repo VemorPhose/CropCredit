@@ -20,7 +20,7 @@ const Navbar = () => {
 
   return (
     <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-6">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
@@ -31,7 +31,7 @@ const Navbar = () => {
           </div>
 
           {/* Desktop Menu */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden md:flex items-center space-x-6">
             <Link
               to="/government-schemes"
               className="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400"
@@ -74,7 +74,7 @@ const Navbar = () => {
               <>
                 <Link
                   to="/login"
-                  className="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400"
+                  className="px-2 py-2 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400"
                 >
                   Login
                 </Link>
@@ -89,7 +89,7 @@ const Navbar = () => {
 
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="p-2 ml-2 rounded-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
             </button>
