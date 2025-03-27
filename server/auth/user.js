@@ -1,79 +1,131 @@
-import connection from "../connection.js"
-import bcrypt from "bcrypt"
-import jwt from "jsonwebtoken"
-import util from 'util'
+import { supabase } from "../db/supabaseClient.js";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 const options = {
-    httpOnly: true,
-    // secure: true
-}
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+};
 
-const query = util.promisify(connection.query).bind(connection);
+const registerUser = async (req, res) => {
+  const { name, email, password, role } = req.body;
 
-const registerUser = async (req,res) => {
-
-    const { username, fullname, email, password } = req.body
-
-    if ([username,fullname,email,password].some((item) => item?.trim() === "")) {
-        throw Error("All Fields Required!")
+  try {
+    if ([name, email, password, role].some((field) => !field?.trim())) {
+      return res.status(400).json({ error: "All Fields Required!" });
     }
 
-    try {
-        const results = await query(`SELECT * FROM users WHERE username = ? OR email = ?`, [username, email])
-        if (results.length > 0) {
-            return res.status(400).json({ error: "Username or Email Already Exists!" });
-        }
+    // Check if user exists
+    const { data: existingUser } = await supabase
+      .from("users")
+      .select("id")
+      .or(`email.eq.${email}`)
+      .single();
 
-        const lastUser = await query('SELECT userID FROM users ORDER BY userID DESC LIMIT 1')
-        let total = lastUser.length > 0 ? lastUser[0].userID : 0
-
-        const encryptedPassword = await bcrypt.hash(password, 10)
-
-        await query(`INSERT INTO users (userID, fullname, username, email, password) VALUES (?, ?, ?, ?, ?)`, [total + 1, fullname, username, email, encryptedPassword])
-
-        return res.status(201).json({ message: "User Registered Successfully!" })
-    } catch (error) {
-        return res.status(500).json({ error: "Database query error" })
+    if (existingUser) {
+      return res.status(400).json({ error: "Email Already Exists!" });
     }
 
-}
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-const loginUser = async (req,res) => {
+    // Insert new user
+    const { data: newUser, error } = await supabase
+      .from("users")
+      .insert([
+        {
+          name,
+          email,
+          password: hashedPassword,
+          role,
+        },
+      ])
+      .select("id, name, email, role")
+      .single();
 
-    const { input, password } = req.body
-
-    if (!input && !password) {
-        throw Error("All Fields Required!")
+    if (error) {
+      if (error.code === "23505") {
+        // Unique violation
+        return res.status(400).json({ error: "Email Already Exists!" });
+      }
+      throw error;
     }
 
-    try {
+    // Set current user ID to allow profile creation
+    await supabase.rpc("set_user_id", { user_id: newUser.id });
 
-        const results = await query(`SELECT * FROM users WHERE username = ? OR email = ?`,[input,input])
-        if (results.length === 0) return res.status(400).json({error: "User Not Found"})
-
-        const user = results[0]
-        const isPasswordValid = await bcrypt.compare(password,user['password'])
-
-        if (!isPasswordValid) return res.status(400).json({error: "Incorrect Password!"})
-            
-        const token = jwt.sign({userID: user['userID'], email: user['email'], username: user['username']}, process.env.JWT_SECRET)
-
-        return res.status(200).cookie("token", token).json({message: "Login Successful!", userID: user['userID']})
-    } catch (error){
-        return res.status(500).json({ error: "Database query error" })
+    // Create role-specific profile
+    if (role === "farmer") {
+      await supabase.from("farmer_profiles").insert([{ user_id: newUser.id }]);
+    } else if (role === "lender") {
+      await supabase.from("lender_profiles").insert([{ user_id: newUser.id }]);
     }
-    
-}
 
-const logoutUser = async (req,res) => {
+    return res.status(201).json({ message: "User Registered Successfully!" });
+  } catch (error) {
+    console.error("Registration error:", error);
+    return res.status(500).json({ error: "Registration failed" });
+  }
+};
 
-    const token = req.cookies?.token || req.header("Authorization")?.replace("Bearer ", "")
+const loginUser = async (req, res) => {
+  const { email, password } = req.body;
 
-    if (!token) return res.status(401).json({error: "Unauthorized Request!"})
-    
-    const decodedToken = jwt.verify(token, process.env.JWT_SECRET)
+  try {
+    if (!email || !password) {
+      return res.status(400).json({ error: "All Fields Required!" });
+    }
 
-    return res.status(200).clearCookie("token", options).json({error: "User Logged Out!"})
-}
+    // Get user
+    const { data: user, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("email", email)
+      .single();
 
-export {registerUser, loginUser, logoutUser}
+    if (error || !user) {
+      return res.status(400).json({ error: "User Not Found" });
+    }
+
+    // Check password
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (!isValidPassword) {
+      return res.status(400).json({ error: "Invalid Password!" });
+    }
+
+    // Create token
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "24h" }
+    );
+
+    // Remove password from user object
+    delete user.password;
+
+    return res
+      .status(200)
+      .cookie("token", token, options)
+      .json({
+        message: "Login Successful!",
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        },
+      });
+  } catch (error) {
+    console.error("Login error:", error);
+    return res.status(500).json({ error: "Login failed" });
+  }
+};
+
+const logoutUser = async (req, res) => {
+  return res
+    .status(200)
+    .clearCookie("token", options)
+    .json({ message: "Logged out successfully" });
+};
+
+export { registerUser, loginUser, logoutUser };

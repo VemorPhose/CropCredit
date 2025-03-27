@@ -1,20 +1,32 @@
 import express from "express";
 import dotenv from "dotenv";
+import cookieParser from "cookie-parser";
+import cors from "cors";
+import { registerUser, loginUser, logoutUser } from "./auth/user.js";
+import { authenticateToken } from "./middlewares/auth_middleware.js";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware to parse JSON requests
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    credentials: true,
+  })
+);
 app.use(express.json());
+app.use(cookieParser());
 
-// Basic route
-app.get("/", (req, res) => {
-  res.send("Hello, World!");
+// Auth routes
+app.post("/api/auth/register", registerUser);
+app.post("/api/auth/login", loginUser);
+app.post("/api/auth/logout", logoutUser);
+app.get("/api/auth/me", authenticateToken, (req, res) => {
+  res.json({ user: req.user });
 });
 
-// Start the server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
