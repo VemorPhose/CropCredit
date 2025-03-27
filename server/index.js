@@ -1,6 +1,5 @@
 import express from "express";
 import dotenv from "dotenv";
-import initDB from "./db/initDB.js";
 
 dotenv.config();
 
@@ -18,5 +17,4 @@ app.get("/", (req, res) => {
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
-  initDB();
 });
