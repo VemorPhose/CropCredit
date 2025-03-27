@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
 
 const AuthContext = createContext({
   user: null,
@@ -15,50 +16,60 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
+    // Check active sessions
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email, password) => {
     try {
-      const mockUser = {
-        id: "1",
-        name: "Test User",
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        role: email.includes("farmer") ? "farmer" : "lender",
-      };
-
-      setUser(mockUser);
-      localStorage.setItem("user", JSON.stringify(mockUser));
+        password,
+      });
+      if (error) throw error;
+      return data;
     } catch (error) {
-      console.error("Login failed:", error);
+      console.error("Login error:", error.message);
       throw error;
     }
   };
 
   const register = async (name, email, password, role) => {
     try {
-      const mockUser = {
-        id: "1",
-        name,
+      const { data, error } = await supabase.auth.signUp({
         email,
-        role,
-      };
-
-      setUser(mockUser);
-      localStorage.setItem("user", JSON.stringify(mockUser));
+        password,
+        options: {
+          data: { name, role }
+        }
+      });
+      if (error) throw error;
+      return data;
     } catch (error) {
-      console.error("Registration failed:", error);
+      console.error("Registration error:", error.message);
       throw error;
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem("user");
+  const logout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    } catch (error) {
+      console.error("Logout error:", error.message);
+      throw error;
+    }
   };
 
   return (
