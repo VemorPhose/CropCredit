@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  # Backend and Frontend service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - NODE_ENV=development
+      - DATABASE_URL=postgres://postgres:password@db:5432/cropcredit
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  # PostgreSQL Database
+  db:
+    image: postgres:14
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=cropcredit
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
