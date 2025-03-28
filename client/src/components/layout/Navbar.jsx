@@ -19,6 +19,9 @@ const Navbar = () => {
     navigate("/login");
   };
 
+  // Check if the user is a lender
+  const isLender = user && user.role === "lender";
+
   return (
     <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
       <div className="container mx-auto px-6">
@@ -47,12 +50,16 @@ const Navbar = () => {
             >
               Schemes
             </Link>
-            <Link
-              to="/credit-analysis"
-              className="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 font-medium"
-            >
-              Credit Analysis
-            </Link>
+            
+            {/* Only show Credit Analysis if not a lender */}
+            {!isLender && (
+              <Link
+                to="/credit-analysis"
+                className="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 font-medium"
+              >
+                Credit Analysis
+              </Link>
+            )}
 
             {user ? (
               <>
@@ -131,13 +138,17 @@ const Navbar = () => {
             >
               Schemes
             </Link>
-            <Link
-              to="/credit-analysis"
-              className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 font-medium"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Credit Analysis
-            </Link>
+            
+            {/* Only show Credit Analysis if not a lender */}
+            {!isLender && (
+              <Link
+                to="/credit-analysis"
+                className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 font-medium"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Credit Analysis
+              </Link>
+            )}
 
             {user ? (
               <>
