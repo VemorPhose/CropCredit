@@ -31,15 +31,24 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
+      console.log("Attempting login with email:", email); // Debug log
+
       const response = await fetch("/api/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
         credentials: "include",
         body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error);
+
+      if (!response.ok) {
+        console.error("Login response error:", data); // Debug log
+        throw new Error(data.error || "Login failed");
+      }
 
       setUser(data.user);
       return data;
@@ -53,13 +62,19 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await fetch("/api/auth/register", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
         body: JSON.stringify({ name, email, password, role }),
       });
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Registration failed");
+      }
 
+      const data = await response.json();
       return data;
     } catch (error) {
       console.error("Registration error:", error);

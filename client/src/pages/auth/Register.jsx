@@ -46,7 +46,7 @@ const Register = () => {
         formData.password,
         formData.role
       );
-      navigate("/");
+      navigate("/login");
     } catch (err) {
       setError("Registration failed. Please try again.");
     } finally {

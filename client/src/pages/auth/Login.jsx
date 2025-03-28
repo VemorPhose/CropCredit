@@ -34,7 +34,7 @@ const Login = () => {
       await login(formData.email, formData.password);
       navigate("/");
     } catch (err) {
-      setError("Invalid email or password. Please try again.");
+      setError(err.message || "Invalid email or password. Please try again.");
     } finally {
       setIsLoading(false);
     }

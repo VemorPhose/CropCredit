@@ -19,7 +19,7 @@ const registerUser = async (req, res) => {
     const { data: existingUser } = await supabase
       .from("users")
       .select("id")
-      .or(`email.eq.${email}`)
+      .eq("email", email)
       .single();
 
     if (existingUser) {
@@ -30,7 +30,7 @@ const registerUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Insert new user
-    const { data: newUser, error } = await supabase
+    const { data: newUser, error: createError } = await supabase
       .from("users")
       .insert([
         {
@@ -43,28 +43,22 @@ const registerUser = async (req, res) => {
       .select("id, name, email, role")
       .single();
 
-    if (error) {
-      if (error.code === "23505") {
-        // Unique violation
-        return res.status(400).json({ error: "Email Already Exists!" });
-      }
-      throw error;
-    }
+    if (createError) throw createError;
 
-    // Set current user ID to allow profile creation
-    await supabase.rpc("set_user_id", { user_id: newUser.id });
-
-    // Create role-specific profile
-    if (role === "farmer") {
-      await supabase.from("farmer_profiles").insert([{ user_id: newUser.id }]);
-    } else if (role === "lender") {
-      await supabase.from("lender_profiles").insert([{ user_id: newUser.id }]);
-    }
-
-    return res.status(201).json({ message: "User Registered Successfully!" });
+    return res.status(201).json({
+      message: "User Registered Successfully!",
+      user: {
+        id: newUser.id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+      },
+    });
   } catch (error) {
     console.error("Registration error:", error);
-    return res.status(500).json({ error: "Registration failed" });
+    return res.status(500).json({
+      error: error.message || "Registration failed",
+    });
   }
 };
 
@@ -76,19 +70,29 @@ const loginUser = async (req, res) => {
       return res.status(400).json({ error: "All Fields Required!" });
     }
 
-    // Get user
-    const { data: user, error } = await supabase
+    console.log("Attempting login for email:", email); // Debug log
+
+    // Get user - Modified query to log the error if any
+    const { data: user, error: userError } = await supabase
       .from("users")
       .select("*")
       .eq("email", email)
       .single();
 
-    if (error || !user) {
+    if (userError) {
+      console.error("Database error:", userError);
+      return res.status(400).json({ error: "User Not Found" });
+    }
+
+    if (!user) {
+      console.log("No user found with email:", email);
       return res.status(400).json({ error: "User Not Found" });
     }
 
     // Check password
     const isValidPassword = await bcrypt.compare(password, user.password);
+    console.log("Password check result:", isValidPassword); // Debug log
+
     if (!isValidPassword) {
       return res.status(400).json({ error: "Invalid Password!" });
     }
@@ -100,21 +104,21 @@ const loginUser = async (req, res) => {
       { expiresIn: "24h" }
     );
 
-    // Remove password from user object
-    delete user.password;
+    // Remove password from response
+    const { password: _, ...userWithoutPassword } = user;
 
-    return res
-      .status(200)
-      .cookie("token", token, options)
-      .json({
-        message: "Login Successful!",
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-        },
-      });
+    // Set cookie and send response
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    });
+
+    return res.status(200).json({
+      message: "Login Successful!",
+      user: userWithoutPassword,
+    });
   } catch (error) {
     console.error("Login error:", error);
     return res.status(500).json({ error: "Login failed" });

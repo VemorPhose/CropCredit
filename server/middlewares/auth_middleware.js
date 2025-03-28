@@ -12,17 +12,15 @@ const authenticateToken = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Set current user ID in database session
-    await supabase.rpc("set_user_id", { user_id: decoded.id });
-
     // Get user details
     const { data: user, error } = await supabase
       .from("users")
-      .select("id, email, name, role")
+      .select("id, name, email, role")
       .eq("id", decoded.id)
       .single();
 
-    if (error || !user) {
+    if (error) {
+      console.error("User fetch error:", error);
       return res.status(403).json({ error: "Invalid Token!" });
     }
 
