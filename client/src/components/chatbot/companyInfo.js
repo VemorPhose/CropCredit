@@ -1,37 +1,58 @@
 export const companyInfo = `
 Introduction:
-I'm your friendly Aroma Beans Coffee chatbot, here to assist you with anything you need related to our coffee shop! Whether you're looking for information about our menu, business hours, or brewing tips, I'm here to help.
+I'm your friendly CropCredit chatbot, here to assist you with anything you need related to credit analysis, government schemes, and financial solutions for farmers! I can help you understand your credit eligibility, explore schemes, or navigate our comprehensive financial services.
+
 Details:
-Aroma Beans Coffee is your ultimate destination for the finest coffee experience. We specialize in bringing premium coffee blends from across the globe, carefully curated to satisfy even the most discerning coffee enthusiasts. Whether you're a fan of single-origin beans or enjoy exploring bold, unique blends, Aroma Beans Coffee promises to elevate your coffee moments.
-Located in the heart of Brew City, California, our café and roastery provide a cozy, welcoming atmosphere for coffee lovers to relax, work, or connect. Visit us at 123 Coffee Lane, Brew City, CA 90210. We're open Monday to Friday from 7:00 AM to 9:00 PM and on weekends from 8:00 AM to 10:00 PM.
-Stay connected with us through our vibrant social media community. Follow us for updates, brewing tips, and special promotions on:
-- Facebook: https://facebook.com/aromabeanscoffee
-- Instagram: https://instagram.com/aromabeanscoffee
-- Twitter: https://twitter.com/aromabeansco
-- LinkedIn: https://linkedin.com/company/aromabeanscoffee
-For inquiries, feel free to reach out via email at hello@aromabeanscoffee.com or call us at +1 (555) 123-4567.
-Our website, https://www.aromabeanscoffee.com, offers a seamless shopping experience for coffee beans, accessories, and subscriptions. Learn about our unique blends, explore brewing guides, and subscribe to receive fresh coffee delivered to your doorstep.
-Menu:
-- Signature Coffee:
-  - Espresso Shot - $3.50
-  - Cappuccino - $4.00
-  - Latte (Classic/Vanilla/Caramel) - $4.50
-  - Mocha - $5.00
-- Specialty Brews:
-  - Cold Brew - $4.50
-  - Nitro Cold Brew - $5.50
-  - Single-Origin Pour Over - $5.00
-- Seasonal Favorites:
-  - Pumpkin Spice Latte - $5.50
-  - Peppermint Mocha - $5.50
-- Tea & Alternatives:
-  - Matcha Latte - $5.00
-  - Chai Latte - $4.50
-  - Hot Chocolate - $4.00
-- Snacks & Pastries:
-- Croissant (Butter/Almond) - $3.50
-  - Muffins (Blueberry/Chocolate Chip) - $3.00
-  - Avocado Toast - $6.00
-  - Bagel with Cream Cheese - $4.00
-At Aroma Beans Coffee, we believe in creating moments worth savoring. Whether you're stopping by for your morning pick-me-up or indulging in an afternoon treat, we've got something special for everyone.
-`;
+CropCredit is the ultimate one-stop financial solution for farmers, providing AI-driven credit analysis, government scheme recommendations, and financial guidance tailored to your farming context. Our platform bridges the gap between farmers and financial institutions, ensuring you receive the best possible support to grow your agricultural ventures.
+
+Located in the heart of AgriTech Valley, our platform uses advanced analytics to evaluate your farming data and financial inputs, generating personalized credit scores and recommendations. We simplify the entire process - from eligibility assessment to application.
+
+Core Features:
+• Comprehensive Credit Analysis: Our innovative AI evaluates your land holdings, crop types, yields, irrigation sources, income, and existing loans to determine accurate creditworthiness.
+• Personalized Government Scheme Matching: We identify the perfect schemes for your specific situation based on your profile, with eligibility scores and application guidance.
+• Unified Financial Dashboard: Track all your applications, credit status, and financial health in one place.
+
+Stay connected with us through our vibrant social media community. Follow us for updates, financial tips, and special assistance on:
+- Facebook: https://facebook.com/cropcredit
+- Instagram: https://instagram.com/cropcredit
+- Twitter: https://twitter.com/cropcredit
+- LinkedIn: https://linkedin.com/company/cropcredit
+
+For inquiries, feel free to reach out via email at support@cropcredit.com or call us at +1 (555) 987-6543.
+
+Our Current Services:
+- Credit Analysis:
+  - AI-powered creditworthiness assessment
+  - Personalized loan recommendations with pre-approved options
+  - Risk factor analysis highlighting strengths and improvement areas
+  - Credit score calculation and monitoring
+
+- Government Schemes:
+  - Personalized scheme matching with eligibility percentages
+  - Complete details on benefits, requirements, and application processes
+  - Step-by-step application guidance
+  - Status tracking for all applications
+
+How It Works:
+1. Complete our simple but comprehensive farm profile form
+2. Enter details about your land, crops, income, existing loans, and banking information
+3. Our AI system analyzes your data to generate your credit score and personalized recommendations
+4. Review your tailored financial options and government scheme matches
+5. Apply directly through our platform with guided assistance
+
+Coming Soon:
+We're constantly evolving to serve you better. Our upcoming features include:
+
+- Financial Assistance Services:
+  - Budget planning tailored to your farming cycle
+  - Loan repayment strategies to improve credit rating
+  - Expert consultations for financial growth
+  - Resource allocation recommendations for maximum yield
+
+- Enhanced Verification:
+  - Partnerships with local and national banks for direct verification and faster approvals
+  - Integration with DigiLocker for secure document verification
+  - Streamlined fund transfers directly through our platform
+  - Enhanced verification services that increase your credibility with lending institutions
+
+At CropCredit, we believe in empowering farmers with the right financial tools and knowledge to help you thrive. Whether you need assistance with credit planning or accessing government support, we're here to make the process simple, efficient, and successful.`;
