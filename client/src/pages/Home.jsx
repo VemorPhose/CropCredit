@@ -3,7 +3,7 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { ArrowRight, BarChart3, Shield, Users } from "lucide-react";
-import farmerImg from "../assets/farmer-bg.jpg";
+import farmerImg from "../assets/farmer.jpg"; // Import the farmer image
 
 const Home = () => {
   const { user } = useAuth();
@@ -17,10 +17,9 @@ const Home = () => {
           <img 
             src={farmerImg} 
             alt="Farmer in field" 
-            className="w-full h-full object-cover transition-property-[filter,opacity] transition-duration-600 transition-timing-function-[cubic-bezier(0.4,0,0.2,1)] dark:filter dark:grayscale dark:opacity-90 opacity-95" 
+            className="w-full h-full object-cover filter grayscale opacity-50"
           />
-          {/* Different overlay gradient for light/dark modes */}
-          <div className="absolute inset-0 bg-gradient-to-r from-gray-900/55 to-gray-900/55 dark:from-gray-900/70 dark:to-gray-900/70 transition-colors duration-600 transition-timing-function-[cubic-bezier(0.4,0,0.2,1)]"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-gray-900/70 to-gray-900/70"></div>
         </div>
         
         {/* Content */}
@@ -69,7 +68,7 @@ const Home = () => {
       <section className="py-12 bg-gray-50 dark:bg-gray-800 rounded-2xl">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12 text-gray-900 dark:text-white">
-            How CropCredit helps
+            How CropCredit Helps
           </h2>
 
           <div className="grid md:grid-cols-3 gap-8">
