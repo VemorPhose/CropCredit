@@ -1,15 +1,22 @@
 from supabase import create_client, Client
 from dotenv import load_dotenv
 import os
+from pathlib import Path
 
-# Load environment variables
-load_dotenv('.env')
+# Get the absolute path to the .env file
+env_path = Path(__file__).parent.parent / '.env'
+
+# Load environment variables from the correct path
+load_dotenv(env_path)
 
 # Create the Supabase client
 supabase_url = os.getenv("SUPABASE_URL")
 supabase_anon_key = os.getenv("SUPABASE_ANON_KEY")
 
-# ✅ Connect to Supabase
+if not supabase_url or not supabase_anon_key:
+    raise ValueError("SUPABASE_URL and SUPABASE_ANON_KEY must be set in .env file")
+
+# Connect to Supabase
 supabase: Client = create_client(supabase_url, supabase_anon_key)
 
 def search_supabase(query):
@@ -20,11 +27,8 @@ def search_supabase(query):
         # Query the government_schemes table
         response = supabase.rpc('search_schemes', {'query': query}).execute()
 
-        if response.get("error"):
-            print(f"Error: {response['error']}")
-            return "Failed to retrieve data from Supabase."
-
-        results = response.get("data", [])
+        # The response structure is different - we need to access data directly
+        results = response.data
 
         if not results:
             return "No relevant information found."
