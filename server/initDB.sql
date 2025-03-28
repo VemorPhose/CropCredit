@@ -1,12 +1,29 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+CREATE OR REPLACE FUNCTION set_user_id(user_id UUID)
+RETURNS VOID AS $$
+BEGIN
+  PERFORM set_config('app.current_user_id', user_id::TEXT, false);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION current_user_id()
+RETURNS UUID AS $$
+BEGIN
+  RETURN CAST(current_setting('app.current_user_id', TRUE) AS UUID);
+EXCEPTION
+  WHEN OTHERS THEN
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Users table for authentication and basic user information
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
-    name VARCHAR(255) NOT NULL,
     role VARCHAR(50) NOT NULL CHECK (role IN ('farmer', 'lender')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -191,113 +208,108 @@ ALTER TABLE credit_evaluations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chatbot_interactions ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for users table
-CREATE POLICY "Users can view their own user record" ON users
-  FOR SELECT USING (auth.uid() = id);
-  
-CREATE POLICY "Users can insert their own user record" ON users
-  FOR INSERT WITH CHECK (auth.uid() = id);
-  
-CREATE POLICY "Users can update their own user record" ON users
-  FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Anyone can insert into users" ON users FOR INSERT WITH CHECK (true);
+CREATE POLICY "Users can view their own data" ON users FOR SELECT USING (id = current_user_id());
+CREATE POLICY "Users can update their own data" ON users FOR UPDATE USING (id = current_user_id());
 
 -- RLS Policies for farmer_profiles table
 CREATE POLICY "Farmers can view their own profile" ON farmer_profiles
-  FOR SELECT USING (auth.uid() = user_id);
+  FOR SELECT USING (current_user_id() = user_id);
   
 CREATE POLICY "Lenders can view farmer profiles" ON farmer_profiles
   FOR SELECT USING (EXISTS (
-    SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'lender'
+    SELECT 1 FROM users WHERE users.id = current_user_id() AND users.role = 'lender'
   ));
   
 CREATE POLICY "Farmers can insert their own profile" ON farmer_profiles
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  FOR INSERT WITH CHECK (current_user_id() = user_id);
   
 CREATE POLICY "Farmers can update their own profile" ON farmer_profiles
-  FOR UPDATE USING (auth.uid() = user_id);
+  FOR UPDATE USING (current_user_id() = user_id);
 
 -- RLS Policies for lender_profiles table
 CREATE POLICY "Lenders can view their own profile" ON lender_profiles
-  FOR SELECT USING (auth.uid() = user_id);
+  FOR SELECT USING (current_user_id() = user_id);
   
 CREATE POLICY "Farmers can view lender profiles" ON lender_profiles
   FOR SELECT USING (EXISTS (
-    SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'farmer'
+    SELECT 1 FROM users WHERE users.id = current_user_id() AND users.role = 'farmer'
   ));
   
 CREATE POLICY "Lenders can insert their own profile" ON lender_profiles
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  FOR INSERT WITH CHECK (current_user_id() = user_id);
   
 CREATE POLICY "Lenders can update their own profile" ON lender_profiles
-  FOR UPDATE USING (auth.uid() = user_id);
+  FOR UPDATE USING (current_user_id() = user_id);
 
 -- RLS Policies for loan_applications table
 CREATE POLICY "Farmers can view their own loan applications" ON loan_applications
   FOR SELECT USING (EXISTS (
-    SELECT 1 FROM farmer_profiles WHERE farmer_profiles.id = farmer_id AND farmer_profiles.user_id = auth.uid()
+    SELECT 1 FROM farmer_profiles WHERE farmer_profiles.id = farmer_id AND farmer_profiles.user_id = current_user_id()
   ));
   
 CREATE POLICY "Lenders can view all loan applications" ON loan_applications
   FOR SELECT USING (EXISTS (
-    SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'lender'
+    SELECT 1 FROM users WHERE users.id = current_user_id() AND users.role = 'lender'
   ));
   
 CREATE POLICY "Farmers can insert their own loan applications" ON loan_applications
   FOR INSERT WITH CHECK (EXISTS (
-    SELECT 1 FROM farmer_profiles WHERE farmer_profiles.id = farmer_id AND farmer_profiles.user_id = auth.uid()
+    SELECT 1 FROM farmer_profiles WHERE farmer_profiles.id = farmer_id AND farmer_profiles.user_id = current_user_id()
   ));
   
 CREATE POLICY "Farmers can update their own loan applications" ON loan_applications
   FOR UPDATE USING (EXISTS (
-    SELECT 1 FROM farmer_profiles WHERE farmer_profiles.id = farmer_id AND farmer_profiles.user_id = auth.uid()
+    SELECT 1 FROM farmer_profiles WHERE farmer_profiles.id = farmer_id AND farmer_profiles.user_id = current_user_id()
   ));
   
 CREATE POLICY "Lenders can update loan applications" ON loan_applications
   FOR UPDATE USING (EXISTS (
-    SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'lender'
+    SELECT 1 FROM users WHERE users.id = current_user_id() AND users.role = 'lender'
   ));
 
 -- RLS Policies for loan_approvals table
 CREATE POLICY "Lenders can view their own loan approvals" ON loan_approvals
   FOR SELECT USING (EXISTS (
-    SELECT 1 FROM lender_profiles WHERE lender_profiles.id = lender_id AND lender_profiles.user_id = auth.uid()
+    SELECT 1 FROM lender_profiles WHERE lender_profiles.id = lender_id AND lender_profiles.user_id = current_user_id()
   ));
   
 CREATE POLICY "Farmers can view loan approvals for their applications" ON loan_approvals
   FOR SELECT USING (EXISTS (
     SELECT 1 FROM loan_applications
     JOIN farmer_profiles ON loan_applications.farmer_id = farmer_profiles.id
-    WHERE loan_applications.id = loan_id AND farmer_profiles.user_id = auth.uid()
+    WHERE loan_applications.id = loan_id AND farmer_profiles.user_id = current_user_id()
   ));
   
 CREATE POLICY "Lenders can insert loan approvals" ON loan_approvals
   FOR INSERT WITH CHECK (EXISTS (
-    SELECT 1 FROM lender_profiles WHERE lender_profiles.id = lender_id AND lender_profiles.user_id = auth.uid()
+    SELECT 1 FROM lender_profiles WHERE lender_profiles.id = lender_id AND lender_profiles.user_id = current_user_id()
   ));
   
 CREATE POLICY "Lenders can update their own loan approvals" ON loan_approvals
   FOR UPDATE USING (EXISTS (
-    SELECT 1 FROM lender_profiles WHERE lender_profiles.id = lender_id AND lender_profiles.user_id = auth.uid()
+    SELECT 1 FROM lender_profiles WHERE lender_profiles.id = lender_id AND lender_profiles.user_id = current_user_id()
   ));
 
 -- RLS Policies for financial_details table
 CREATE POLICY "Farmers can view their own financial details" ON financial_details
   FOR SELECT USING (EXISTS (
-    SELECT 1 FROM farmer_profiles WHERE farmer_profiles.id = farmer_id AND farmer_profiles.user_id = auth.uid()
+    SELECT 1 FROM farmer_profiles WHERE farmer_profiles.id = farmer_id AND farmer_profiles.user_id = current_user_id()
   ));
   
 CREATE POLICY "Lenders can view financial details" ON financial_details
   FOR SELECT USING (EXISTS (
-    SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'lender'
+    SELECT 1 FROM users WHERE users.id = current_user_id() AND users.role = 'lender'
   ));
   
 CREATE POLICY "Farmers can insert their own financial details" ON financial_details
   FOR INSERT WITH CHECK (EXISTS (
-    SELECT 1 FROM farmer_profiles WHERE farmer_profiles.id = farmer_id AND farmer_profiles.user_id = auth.uid()
+    SELECT 1 FROM farmer_profiles WHERE farmer_profiles.id = farmer_id AND farmer_profiles.user_id = current_user_id()
   ));
   
 CREATE POLICY "Farmers can update their own financial details" ON financial_details
   FOR UPDATE USING (EXISTS (
-    SELECT 1 FROM farmer_profiles WHERE farmer_profiles.id = farmer_id AND farmer_profiles.user_id = auth.uid()
+    SELECT 1 FROM farmer_profiles WHERE farmer_profiles.id = farmer_id AND farmer_profiles.user_id = current_user_id()
   ));
 
 -- RLS Policies for government_schemes table
@@ -305,19 +317,19 @@ CREATE POLICY "Anyone can view government schemes" ON government_schemes
   FOR SELECT USING (true);
   
 CREATE POLICY "Only administrators can modify government schemes" ON government_schemes
-  FOR ALL USING (auth.uid() IN (
+  FOR ALL USING (current_user_id() IN (
     SELECT id FROM users WHERE role = 'admin'
   ));
 
 -- RLS Policies for farmer_scheme_eligibility table
 CREATE POLICY "Farmers can view their own scheme eligibility" ON farmer_scheme_eligibility
   FOR SELECT USING (EXISTS (
-    SELECT 1 FROM farmer_profiles WHERE farmer_profiles.id = farmer_id AND farmer_profiles.user_id = auth.uid()
+    SELECT 1 FROM farmer_profiles WHERE farmer_profiles.id = farmer_id AND farmer_profiles.user_id = current_user_id()
   ));
   
 CREATE POLICY "Lenders can view scheme eligibility" ON farmer_scheme_eligibility
   FOR SELECT USING (EXISTS (
-    SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'lender'
+    SELECT 1 FROM users WHERE users.id = current_user_id() AND users.role = 'lender'
   ));
   
 CREATE POLICY "System can insert scheme eligibility" ON farmer_scheme_eligibility
@@ -325,18 +337,18 @@ CREATE POLICY "System can insert scheme eligibility" ON farmer_scheme_eligibilit
   
 CREATE POLICY "Farmers can update their own scheme application status" ON farmer_scheme_eligibility
   FOR UPDATE USING (EXISTS (
-    SELECT 1 FROM farmer_profiles WHERE farmer_profiles.id = farmer_id AND farmer_profiles.user_id = auth.uid()
+    SELECT 1 FROM farmer_profiles WHERE farmer_profiles.id = farmer_id AND farmer_profiles.user_id = current_user_id()
   ));
 
 -- RLS Policies for risk_factors table
 CREATE POLICY "Farmers can view their own risk factors" ON risk_factors
   FOR SELECT USING (EXISTS (
-    SELECT 1 FROM farmer_profiles WHERE farmer_profiles.id = farmer_id AND farmer_profiles.user_id = auth.uid()
+    SELECT 1 FROM farmer_profiles WHERE farmer_profiles.id = farmer_id AND farmer_profiles.user_id = current_user_id()
   ));
   
 CREATE POLICY "Lenders can view risk factors" ON risk_factors
   FOR SELECT USING (EXISTS (
-    SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'lender'
+    SELECT 1 FROM users WHERE users.id = current_user_id() AND users.role = 'lender'
   ));
   
 CREATE POLICY "System can insert risk factors" ON risk_factors
@@ -350,52 +362,52 @@ CREATE POLICY "Farmers can view their own loan repayments" ON loan_repayments
   FOR SELECT USING (EXISTS (
     SELECT 1 FROM loan_applications
     JOIN farmer_profiles ON loan_applications.farmer_id = farmer_profiles.id
-    WHERE loan_applications.id = loan_id AND farmer_profiles.user_id = auth.uid()
+    WHERE loan_applications.id = loan_id AND farmer_profiles.user_id = current_user_id()
   ));
   
 CREATE POLICY "Lenders can view loan repayments" ON loan_repayments
   FOR SELECT USING (EXISTS (
     SELECT 1 FROM loan_approvals
     JOIN lender_profiles ON loan_approvals.lender_id = lender_profiles.id
-    WHERE loan_approvals.loan_id = loan_id AND lender_profiles.user_id = auth.uid()
+    WHERE loan_approvals.loan_id = loan_id AND lender_profiles.user_id = current_user_id()
   ));
   
 CREATE POLICY "Farmers can insert their own loan repayments" ON loan_repayments
   FOR INSERT WITH CHECK (EXISTS (
     SELECT 1 FROM loan_applications
     JOIN farmer_profiles ON loan_applications.farmer_id = farmer_profiles.id
-    WHERE loan_applications.id = loan_id AND farmer_profiles.user_id = auth.uid()
+    WHERE loan_applications.id = loan_id AND farmer_profiles.user_id = current_user_id()
   ));
   
 CREATE POLICY "Lenders can update loan repayment status" ON loan_repayments
   FOR UPDATE USING (EXISTS (
     SELECT 1 FROM loan_approvals
     JOIN lender_profiles ON loan_approvals.lender_id = lender_profiles.id
-    WHERE loan_approvals.loan_id = loan_id AND lender_profiles.user_id = auth.uid()
+    WHERE loan_approvals.loan_id = loan_id AND lender_profiles.user_id = current_user_id()
   ));
 
 -- RLS Policies for credit_evaluations table
 CREATE POLICY "Users can view their own credit evaluations" ON credit_evaluations
-    FOR SELECT USING (auth.uid() = user_id);
+    FOR SELECT USING (current_user_id() = user_id);
 
 CREATE POLICY "Users can insert their own credit evaluations" ON credit_evaluations
-    FOR INSERT WITH CHECK (auth.uid() = user_id);
+    FOR INSERT WITH CHECK (current_user_id() = user_id);
 
 CREATE POLICY "Users can update their own credit evaluations" ON credit_evaluations
-    FOR UPDATE USING (auth.uid() = user_id);
+    FOR UPDATE USING (current_user_id() = user_id);
 
 CREATE POLICY "Lenders can view credit evaluations" ON credit_evaluations
     FOR SELECT USING (EXISTS (
         SELECT 1 FROM users 
-        WHERE users.id = auth.uid() AND users.role = 'lender'
+        WHERE users.id = current_user_id() AND users.role = 'lender'
     ));
 
 -- RLS Policies for chatbot_interactions table
 CREATE POLICY "Users can view their own chat interactions" ON chatbot_interactions
-    FOR SELECT USING (auth.uid() = user_id);
+    FOR SELECT USING (current_user_id() = user_id);
 
 CREATE POLICY "Users can insert their own chat interactions" ON chatbot_interactions
-    FOR INSERT WITH CHECK (auth.uid() = user_id);
+    FOR INSERT WITH CHECK (current_user_id() = user_id);
 
 CREATE POLICY "Users can update their own chat interactions" ON chatbot_interactions
-    FOR UPDATE USING (auth.uid() = user_id);
+    FOR UPDATE USING (current_user_id() = user_id);

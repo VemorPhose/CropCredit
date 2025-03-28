@@ -62,12 +62,7 @@ const Login = () => {
         userData.role === "farmer" ? "/farmer-dashboard" : "/lender-dashboard"
       );
     } catch (err) {
-      console.error("Login error:", err);
-      setError(
-        err.message === "Email not confirmed"
-          ? "Please confirm your email before logging in"
-          : "Invalid email or password. Please try again."
-      );
+      setError(err.message || "Invalid email or password. Please try again.");
     } finally {
       setIsLoading(false);
     }
