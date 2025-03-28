@@ -48,43 +48,6 @@ def get_farmer_data(farmer_id):
         print(f"Error fetching farmer data: {e}")
         return None
 
-def evaluate_farmer_score(farmer_id):
-    """Evaluate farmer's credit score using data from Supabase"""
-    try:
-        farmer_data = get_farmer_data(farmer_id)
-        if not farmer_data:
-            raise ValueError("Could not fetch farmer data")
-
-        score, rating = evaluate_farmer(farmer_data, WEIGHTS)
-
-        # Update credit score in farmer profile
-        supabase.table('farmer_profiles')\
-            .update({'credit_score': score})\
-            .eq('id', farmer_id)\
-            .execute()
-
-        # Store evaluation in credit_evaluations table
-        supabase.table('credit_evaluations')\
-            .insert({
-                'user_id': farmer_id,
-                'credit_score': score,
-                'algorithm_version': '1.0',
-                'input_data': farmer_data,
-                'notes': f"Automated evaluation: {rating}"
-            })\
-            .execute()
-
-        return {
-            'score': score,
-            'rating': rating,
-            'details': farmer_data
-        }
-
-    except Exception as e:
-        print(f"Error in credit score evaluation: {e}")
-        return None
-
-# Scoring function with adjustable weights
 def evaluate_farmer(farmer, weights):
     """
     Evaluates the credit score of a farmer using adjustable weights.
@@ -166,11 +129,61 @@ def evaluate_farmer(farmer, weights):
 
     return score, rating
 
+def store_credit_evaluation(farmer_id, score, rating, input_data):
+    """Store credit evaluation results in Supabase"""
+    try:
+        # Update credit score in farmer profile
+        supabase.table('farmer_profiles')\
+            .update({'credit_score': score})\
+            .eq('id', farmer_id)\
+            .execute()
+
+        # Store evaluation details
+        supabase.table('credit_evaluations')\
+            .insert({
+                'user_id': farmer_id,
+                'credit_score': score,
+                'algorithm_version': '1.0',
+                'input_data': input_data,
+                'notes': f"Automated evaluation: {rating}"
+            })\
+            .execute()
+    except Exception as e:
+        print(f"Error storing credit evaluation: {e}")
+        raise e
+
+def calculate_credit_score(farmer_id):
+    """Main function to calculate credit score for a given farmer ID"""
+    try:
+        # Get farmer data
+        farmer_data = get_farmer_data(farmer_id)
+        if not farmer_data:
+            raise ValueError(f"No data found for farmer ID: {farmer_id}")
+
+        # Calculate score
+        score, rating = evaluate_farmer(farmer_data, WEIGHTS)
+
+        # Store results
+        store_credit_evaluation(farmer_id, score, rating, farmer_data)
+
+        return {
+            'status': 'success',
+            'score': score,
+            'rating': rating,
+            'details': farmer_data
+        }
+    except Exception as e:
+        print(f"Error calculating credit score: {e}")
+        return {
+            'status': 'error',
+            'message': str(e)
+        }
+
 if __name__ == "__main__":
-    # Example usage
-    farmer_id = "example-uuid"  # Replace with actual farmer UUID
-    result = evaluate_farmer_score(farmer_id)
-    if result:
-        print(f"Credit Score: {result['score']}")
-        print(f"Rating: {result['rating']}")
-        print("Farmer Details:", result['details'])
+    import sys
+    if len(sys.argv) > 1:
+        farmer_id = sys.argv[1]
+        result = calculate_credit_score(farmer_id)
+        print(result)
+    else:
+        print("Please provide farmer ID as argument")
