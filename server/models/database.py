@@ -1,57 +1,42 @@
-import psycopg2
+from supabase import create_client, Client
 from dotenv import load_dotenv
 import os
 
-# Load variables from .env
+# Load environment variables
 load_dotenv('.env')
 
-# Load variables from .env.secret
-load_dotenv('.env.secret')
+# Create the Supabase client
+supabase_url = os.getenv("SUPABASE_URL")
+supabase_anon_key = os.getenv("SUPABASE_ANON_KEY")
 
-# Connect to PostgreSQL
-conn = psycopg2.connect(
-    dbname=os.getenv("SUPABASE_DB_NAME"),
-    user=os.getenv("SUPABASE_DB_USER"),
-    password=os.getenv("SUPABASE_DB_PASSWORD"),
-    host=os.getenv("SUPABASE_HOST"),       # ✅ Use the correct Supabase host
-    port="5432"                             # ✅ Supabase uses 5432
-)
-cur = conn.cursor()
+# ✅ Connect to Supabase
+supabase: Client = create_client(supabase_url, supabase_anon_key)
 
 def search_supabase(query):
     """
-    Perform a semantic search using pg_trgm similarity.
+    Perform a semantic search on Supabase using SQL.
     """
     try:
-        # Improved SQL query with pg_trgm semantic matching
-        sql = """
-        SELECT 
-            name, description, benefits, category,
-            similarity(description, %s) AS score
-        FROM government_schemes
-        WHERE description % %s
-        ORDER BY score DESC
-        LIMIT 5;
-        """
-        
-        cur.execute(sql, (query, query))
-        results = cur.fetchall()
+        # Query the government_schemes table
+        response = supabase.rpc('search_schemes', {'query': query}).execute()
+
+        if response.get("error"):
+            print(f"Error: {response['error']}")
+            return "Failed to retrieve data from Supabase."
+
+        results = response.get("data", [])
 
         if not results:
             return "No relevant information found."
 
         # Format the results into readable format
-        response = "\n".join(
-            [f"🛠️ **{row[0]}**\n{row[1]}\n✨ Benefits: {row[2]}\n📌 Category: {row[3]} (Score: {row[4]:.2f})" 
+        output = "\n".join(
+            [f"🛠️ **{row['name']}**\n{row['description']}\n✨ Benefits: {row['benefits']}\n📌 Category: {row['category']}"
              for row in results]
         )
-        
-        return response
+
+        return output
 
     except Exception as e:
         print(f"Error: {e}")
         return "Failed to retrieve data from Supabase."
-
-    finally:
-        cur.close()
-        conn.close()
