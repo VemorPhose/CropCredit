@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight, Check, AlertCircle, X } from "lucide-react";
 
 const CreditAnalysis = () => {
   const [formData, setFormData] = useState({
@@ -17,6 +17,8 @@ const CreditAnalysis = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [showError, setShowError] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -28,6 +30,12 @@ const CreditAnalysis = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    if (!agreedToTerms) {
+      setShowError(true);
+      return;
+    }
+
     setIsSubmitting(true);
 
     // Simulate API call
@@ -83,6 +91,45 @@ const CreditAnalysis = () => {
           analysis
         </p>
       </div>
+
+      {/* Error message popup - Click anywhere to dismiss */}
+      {showError && (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50"
+          onClick={() => setShowError(false)}
+        >
+          <div className="absolute inset-0 bg-black opacity-20"></div>
+          <div
+            className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg z-10 mx-4 max-w-md w-full border border-red-200 dark:border-red-900"
+            onClick={(e) => e.stopPropagation()} // Prevent clicks on the modal itself from closing it
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex items-center">
+                <AlertCircle size={24} className="text-red-500 mr-2" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Agreement Required
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowError(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <p className="text-gray-700 dark:text-gray-300 mb-4">
+              Please agree to the terms and conditions before proceeding with
+              the credit analysis.
+            </p>
+            <button
+              onClick={() => setShowError(false)}
+              className="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded-md font-medium mt-2"
+            >
+              Understood
+            </button>
+          </div>
+        </div>
+      )}
 
       {!analysisResult ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -246,6 +293,25 @@ const CreditAnalysis = () => {
                   className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
                 />
               </div>
+            </div>
+
+            {/* Terms and conditions checkbox */}
+            <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={agreedToTerms}
+                  onChange={(e) => setAgreedToTerms(e.target.checked)}
+                  className="mt-1 h-4 w-4 accent-green-600 cursor-pointer"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300">
+                  I agree that all the information provided is accurate to the
+                  best of my knowledge, and I consent to the processing of this
+                  information for credit analysis purposes. I understand that
+                  providing false information may result in rejection of credit
+                  applications.
+                </span>
+              </label>
             </div>
 
             <div className="flex justify-end">

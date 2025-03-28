@@ -12,6 +12,7 @@ import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import PrivateRoute from "./components/auth/PrivateRoute";
 import NotFound from "./pages/NotFound";
+import ChatBot from "./components/ChatBot";
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
         <div className="flex flex-col min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
           <Navbar />
           <main className="flex-grow container mx-auto px-4 py-8">
+            <ChatBot />
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
