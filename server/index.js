@@ -6,6 +6,7 @@ import { registerUser, loginUser, logoutUser } from "./auth/user.js";
 import { authenticateToken } from "./middlewares/auth_middleware.js";
 import profileRouter from "./routes/profile.js";
 import farmerRouter from "./routes/farmer.js";
+import creditRouter from "./routes/credit.js";
 
 dotenv.config();
 
@@ -33,6 +34,7 @@ app.get("/api/auth/me", authenticateToken, (req, res) => {
 
 app.use(profileRouter);
 app.use(farmerRouter);
+app.use(creditRouter);
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);

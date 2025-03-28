@@ -1,189 +1,116 @@
+import sys
+import json
+import os
 from pathlib import Path
 from dotenv import load_dotenv
-import os
-from .database import supabase
+from database import supabase
 
-# Adjustable weights dictionary
-WEIGHTS = {
-    "landHolding": 3,
-    "cropType": 2,
-    "annualIncome": 3,
-    "existingLoans": 2,
-    "repaymentHistory": 4,
-    "cropYield": 3,
-    "irrigationSource": 2,
-    "farmingExperience": 3
-}
+# Load environment variables
+env_path = Path(__file__).parent.parent / '.env'
+load_dotenv(env_path)
 
-def get_farmer_data(farmer_id):
-    """Fetch farmer data from Supabase tables"""
+def calculate_credit_score(user_id, input_data):
     try:
-        # Get farmer profile
-        profile = supabase.table('farmer_profiles')\
-            .select('*')\
-            .eq('id', farmer_id)\
-            .single()\
-            .execute()
+        # Normalize input values
+        land_holding = float(input_data.get('landHolding', 0))
+        annual_income = float(input_data.get('annualIncome', 0))
+        farming_experience = float(input_data.get('farmingExperience', 0))
+        crop_yield = float(input_data.get('cropYield', 0))
+        repayment_history = input_data.get('repaymentHistory', 'none')
 
-        # Get financial details
-        financial = supabase.table('financial_details')\
-            .select('*')\
-            .eq('farmer_id', farmer_id)\
-            .single()\
-            .execute()
+        # Calculate base score (out of 850)
+        score = 0
+        max_score = 850
 
-        if profile.data and financial.data:
-            return {
-                "landHolding": float(profile.data.get('land_holding', 0)),
-                "cropType": "cash_crop" if profile.data.get('primary_crop') in ['cotton', 'sugarcane', 'wheat'] else "mixed_crop",
-                "annualIncome": float(profile.data.get('annual_income', 0)) / 100000,  # Convert to lakhs
-                "existingLoans": float(financial.data.get('existing_loans', 0)),
-                "repaymentHistory": financial.data.get('repayment_history', 'no_data'),
-                "cropYield": float(financial.data.get('crop_yield', 0)),
-                "irrigationSource": profile.data.get('irrigation_source', 'rainfed'),
-                "farmingExperience": int(profile.data.get('farming_experience', 0))
-            }
-        return None
-    except Exception as e:
-        print(f"Error fetching farmer data: {e}")
-        return None
+        # Land holding (20% weight)
+        if land_holding >= 10:
+            score += 170
+        elif land_holding >= 5:
+            score += 130
+        elif land_holding >= 2:
+            score += 85
+        else:
+            score += 40
 
-def evaluate_farmer(farmer, weights):
-    """
-    Evaluates the credit score of a farmer using adjustable weights.
-    Returns the total score and the rating category.
-    """
-    score = 0
+        # Annual income (25% weight)
+        if annual_income >= 500000:
+            score += 212
+        elif annual_income >= 300000:
+            score += 170
+        elif annual_income >= 100000:
+            score += 127
+        else:
+            score += 85
 
-    # Land Holding
-    if farmer['landHolding'] >= 10:
-        score += weights['landHolding'] * 3
-    elif farmer['landHolding'] >= 5:
-        score += weights['landHolding'] * 2
-    else:
-        score += weights['landHolding'] * 1
+        # Farming experience (20% weight)
+        if farming_experience >= 10:
+            score += 170
+        elif farming_experience >= 5:
+            score += 127
+        elif farming_experience >= 2:
+            score += 85
+        else:
+            score += 42
 
-    # Crop Type
-    if farmer['cropType'] == "cash_crop":
-        score += weights['cropType'] * 3
-    elif farmer['cropType'] == "mixed_crop":
-        score += weights['cropType'] * 2
-    else:
-        score += weights['cropType'] * 1
-
-    # Annual Income
-    if farmer['annualIncome'] >= 10:
-        score += weights['annualIncome'] * 3
-    elif farmer['annualIncome'] >= 5:
-        score += weights['annualIncome'] * 2
-    else:
-        score += weights['annualIncome'] * 1
-
-    # Existing Loans
-    if farmer['existingLoans'] == 0:
-        score += weights['existingLoans'] * 3
-    elif farmer['existingLoans'] <= 2:
-        score += weights['existingLoans'] * 2
-    else:
-        score += weights['existingLoans'] * 1
-
-    # Repayment History
-    if farmer['repaymentHistory'] == "no_default":
-        score += weights['repaymentHistory'] * 3
-    elif farmer['repaymentHistory'] == "minor_delay":
-        score += weights['repaymentHistory'] * 2
-    else:
-        score += weights['repaymentHistory'] * 1
-
-    # Crop Yield
-    if farmer['cropYield'] >= 25:
-        score += weights['cropYield'] * 3
-    elif farmer['cropYield'] >= 15:
-        score += weights['cropYield'] * 2
-    else:
-        score += weights['cropYield'] * 1
-
-    # Irrigation Source
-    if farmer['irrigationSource'] == "full":
-        score += weights['irrigationSource'] * 3
-    elif farmer['irrigationSource'] == "partial":
-        score += weights['irrigationSource'] * 2
-    else:
-        score += weights['irrigationSource'] * 1
-
-    # Farming Experience
-    if farmer['farmingExperience'] >= 10:
-        score += weights['farmingExperience'] * 3
-    elif farmer['farmingExperience'] >= 5:
-        score += weights['farmingExperience'] * 2
-    else:
-        score += weights['farmingExperience'] * 1
-
-    # Categorizing the score
-    if score >= 15 * sum(weights.values()) / 10:
-        rating = "High Credit Rating"
-    elif score >= 8 * sum(weights.values()) / 10:
-        rating = "Average Credit Rating"
-    else:
-        rating = "Low Credit Rating"
-
-    return score, rating
-
-def store_credit_evaluation(farmer_id, score, rating, input_data):
-    """Store credit evaluation results in Supabase"""
-    try:
-        # Update credit score in farmer profile
-        supabase.table('farmer_profiles')\
-            .update({'credit_score': score})\
-            .eq('id', farmer_id)\
-            .execute()
-
-        # Store evaluation details
-        supabase.table('credit_evaluations')\
-            .insert({
-                'user_id': farmer_id,
-                'credit_score': score,
-                'algorithm_version': '1.0',
-                'input_data': input_data,
-                'notes': f"Automated evaluation: {rating}"
-            })\
-            .execute()
-    except Exception as e:
-        print(f"Error storing credit evaluation: {e}")
-        raise e
-
-def calculate_credit_score(farmer_id):
-    """Main function to calculate credit score for a given farmer ID"""
-    try:
-        # Get farmer data
-        farmer_data = get_farmer_data(farmer_id)
-        if not farmer_data:
-            raise ValueError(f"No data found for farmer ID: {farmer_id}")
-
-        # Calculate score
-        score, rating = evaluate_farmer(farmer_data, WEIGHTS)
-
-        # Store results
-        store_credit_evaluation(farmer_id, score, rating, farmer_data)
-
-        return {
-            'status': 'success',
-            'score': score,
-            'rating': rating,
-            'details': farmer_data
+        # Repayment history (25% weight)
+        repayment_scores = {
+            'excellent': 212,
+            'good': 170,
+            'fair': 127,
+            'poor': 85,
+            'none': 106
         }
-    except Exception as e:
-        print(f"Error calculating credit score: {e}")
+        score += repayment_scores.get(repayment_history, 85)
+
+        # Crop yield (10% weight)
+        if crop_yield >= 30:
+            score += 86
+        elif crop_yield >= 20:
+            score += 64
+        elif crop_yield >= 10:
+            score += 43
+        else:
+            score += 21
+
+        # Prepare response
         return {
-            'status': 'error',
-            'message': str(e)
+            "success": True,
+            "score": int(score),
+            "details": {
+                "landHolding": land_holding,
+                "annualIncome": annual_income,
+                "farmingExperience": farming_experience,
+                "repaymentHistory": repayment_history,
+                "cropYield": crop_yield
+            }
+        }
+
+    except Exception as e:
+        print(f"Error: {str(e)}", file=sys.stderr)
+        return {
+            "success": False,
+            "error": str(e)
         }
 
 if __name__ == "__main__":
-    import sys
-    if len(sys.argv) > 1:
-        farmer_id = sys.argv[1]
-        result = calculate_credit_score(farmer_id)
-        print(result)
-    else:
-        print("Please provide farmer ID as argument")
+    try:
+        if len(sys.argv) != 3:
+            print(json.dumps({
+                "success": False,
+                "error": "Invalid arguments"
+            }))
+            sys.exit(1)
+
+        user_id = sys.argv[1]
+        input_data = json.loads(sys.argv[2])
+        
+        result = calculate_credit_score(user_id, input_data)
+        print(json.dumps(result))
+        sys.exit(0 if result["success"] else 1)
+        
+    except Exception as e:
+        print(json.dumps({
+            "success": False,
+            "error": str(e)
+        }))
+        sys.exit(1)

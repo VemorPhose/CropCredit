@@ -161,6 +161,18 @@ CREATE TABLE chatbot_interactions (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Add this to initDB.sql if not already present
+CREATE TABLE IF NOT EXISTS credit_evaluations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    credit_score INTEGER NOT NULL,
+    risk_factors JSONB,
+    loan_eligibility JSONB,
+    input_data JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Initial seed data for government schemes
 INSERT INTO government_schemes (name, description, eligibility, benefits, category) VALUES
 ('PM-KISAN', 'Pradhan Mantri Kisan Samman Nidhi provides income support of ₹6,000 per year to all farmer families across the country in three equal installments of ₹2,000 each every four months.', 'All farmer families with cultivable land.', 'Direct income support of ₹6,000 per year.', 'Income Support'),
@@ -411,3 +423,30 @@ CREATE POLICY "Users can insert their own chat interactions" ON chatbot_interact
 
 CREATE POLICY "Users can update their own chat interactions" ON chatbot_interactions
     FOR UPDATE USING (current_user_id() = user_id);
+
+-- Add GIN index for faster text search
+CREATE INDEX idx_schemes_description ON government_schemes USING gin(description gin_trgm_ops);
+CREATE INDEX idx_financial_repayment ON financial_details USING gin(repayment_history gin_trgm_ops);
+CREATE INDEX idx_loans_purpose ON loan_applications USING gin(purpose gin_trgm_ops);
+
+-- Create the search function
+CREATE OR REPLACE FUNCTION search_schemes(query TEXT)
+RETURNS SETOF government_schemes AS $$
+BEGIN
+  RETURN QUERY
+  SELECT * FROM government_schemes
+  WHERE description ILIKE '%' || query || '%'
+  ORDER BY similarity(description, query) DESC
+  LIMIT 5;
+END;
+$$ LANGUAGE plpgsql;
+
+----------------------------------------------------
+INSERT INTO users (id, name, email, password, role)
+VALUES (
+    '00000000-0000-0000-0000-000000000000',
+    'Test Bot User',
+    'testbot@example.com',
+    'password123',
+    'farmer'
+) ON CONFLICT (id) DO NOTHING;

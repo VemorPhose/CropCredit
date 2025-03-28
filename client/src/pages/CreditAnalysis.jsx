@@ -19,6 +19,7 @@ const CreditAnalysis = () => {
   const [analysisResult, setAnalysisResult] = useState(null);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showError, setShowError] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -28,7 +29,7 @@ const CreditAnalysis = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!agreedToTerms) {
@@ -38,46 +39,84 @@ const CreditAnalysis = () => {
 
     setIsSubmitting(true);
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const response = await fetch("/api/credit/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to analyze credit");
+      }
+
+      const result = await response.json();
+
+      if (result.status === "error") {
+        throw new Error(result.message);
+      }
+
+      // Transform Python result to match frontend format
       setAnalysisResult({
-        creditScore: 720,
+        creditScore: result.score,
         loanEligibility: {
-          maxAmount: "₹5,00,000",
-          interestRate: "7.5%",
-          term: "Up to 5 years",
-          status: "Pre-approved",
+          maxAmount:
+            result.score >= 750
+              ? "₹10,00,000"
+              : result.score >= 650
+              ? "₹7,50,000"
+              : result.score >= 550
+              ? "₹5,00,000"
+              : "₹2,50,000",
+          interestRate:
+            result.score >= 750
+              ? "8%"
+              : result.score >= 650
+              ? "10%"
+              : result.score >= 550
+              ? "12%"
+              : "14%",
+          term: "12 months",
+          status: result.score >= 550 ? "Eligible" : "Limited Options",
         },
         riskFactors: [
           {
-            factor: "Crop Diversification",
-            status: "Good",
-            description: "Growing multiple crops reduces risk",
+            factor: "Land Holding",
+            status: result.details.landHolding >= 5 ? "Good" : "Medium",
+            description: `You have ${result.details.landHolding} acres of land`,
           },
           {
-            factor: "Irrigation Access",
-            status: "Good",
-            description: "Reliable irrigation source available",
+            factor: "Farming Experience",
+            status: result.details.farmingExperience >= 5 ? "Good" : "Medium",
+            description: `${result.details.farmingExperience} years of farming experience`,
           },
           {
             factor: "Repayment History",
-            status: "Excellent",
-            description: "Consistent repayment of previous loans",
+            status:
+              result.details.repaymentHistory === "excellent"
+                ? "Excellent"
+                : result.details.repaymentHistory === "good"
+                ? "Good"
+                : "Medium",
+            description: "Based on past loan repayment records",
           },
           {
             factor: "Income Stability",
-            status: "Medium",
-            description: "Income fluctuations observed in past seasons",
+            status: result.details.annualIncome >= 500000 ? "Good" : "Medium",
+            description: "Based on annual income and crop yield",
           },
         ],
-        eligibleSchemes: [
-          { id: 1, name: "PM-KISAN", match: "95%" },
-          { id: 2, name: "Kisan Credit Card", match: "90%" },
-          { id: 3, name: "Soil Health Card", match: "85%" },
-        ],
+        eligibleSchemes: result.eligibleSchemes || [],
       });
+    } catch (error) {
+      console.error("Credit analysis error:", error);
+      setError(error.message || "Failed to analyze credit");
+    } finally {
       setIsSubmitting(false);
-    }, 2000);
+    }
   };
 
   return (
