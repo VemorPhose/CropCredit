@@ -6,6 +6,7 @@ import { ThemeContext } from "../../context/ThemeContext";
 import { useAuth } from "../../hooks/useAuth";
 import { Sun, Moon, Menu, X } from "lucide-react";
 import { useState } from "react";
+import farmSvg from "../../assets/farm-svgrepo-com.svg";
 
 const Navbar = () => {
   const { theme, toggleTheme } = useContext(ThemeContext);
@@ -21,12 +22,20 @@ const Navbar = () => {
   return (
     <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
       <div className="container mx-auto px-6">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex justify-between items-center h-20">
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
-              <span className="text-green-600 dark:text-green-400 text-xl font-bold">
-                CropCredit
-              </span>
+              <div className="flex items-center">
+                <img 
+                  src={farmSvg} 
+                  alt="Farm Logo" 
+                  className="h-12 w-12 md:h-14 md:w-14" 
+                />
+                <span className="text-xl md:text-2xl font-bold ml-2">
+                  <span className="text-green-600 dark:text-green-400">Crop</span>
+                  <span className="text-green-600 dark:text-green-400">Credit</span>
+                </span>
+              </div>
             </Link>
           </div>
 

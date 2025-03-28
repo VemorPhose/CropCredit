@@ -3,20 +3,32 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { ArrowRight, BarChart3, Shield, Users } from "lucide-react";
+import farmerImg from "../assets/farmer.jpg"; // Import the farmer image
 
 const Home = () => {
   const { user } = useAuth();
 
   return (
     <div className="space-y-16">
-      {/* Hero Section */}
-      <section className="py-12 md:py-20">
-        <div className="container mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900 dark:text-white">
+      {/* Hero Section with Background Image */}
+      <section className="relative py-16 md:py-24">
+        {/* Background image with overlay */}
+        <div className="absolute inset-0 overflow-hidden rounded-2xl">
+          <img 
+            src={farmerImg} 
+            alt="Farmer in field" 
+            className="w-full h-full object-cover filter grayscale opacity-50"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-gray-900/70 to-gray-900/70"></div>
+        </div>
+        
+        {/* Content */}
+        <div className="container relative mx-auto z-10 text-center px-4">
+          <h1 className="text-4xl md:text-5xl font-bold mb-6 text-white">
             AI-Driven Credit Analysis for{" "}
-            <span className="text-green-600 dark:text-green-400">Farmers</span>
+            <span className="text-green-400">Farmers</span>
           </h1>
-          <p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto text-gray-700 dark:text-gray-300">
+          <p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto text-gray-200">
             Discover eligible government schemes and get accurate credit
             assessments to access the best financial support.
           </p>
@@ -42,7 +54,7 @@ const Home = () => {
                 </Link>
                 <Link
                   to="/login"
-                  className="bg-white dark:bg-gray-800 text-green-600 dark:text-green-400 border border-green-600 dark:border-green-400 hover:bg-green-50 dark:hover:bg-gray-700 px-6 py-3 rounded-md font-medium"
+                  className="bg-white/90 hover:bg-white text-green-600 border border-green-600 px-6 py-3 rounded-md font-medium"
                 >
                   Login
                 </Link>
@@ -53,7 +65,7 @@ const Home = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-12 bg-gray-50 dark:bg-gray-800">
+      <section className="py-12 bg-gray-50 dark:bg-gray-800 rounded-2xl">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12 text-gray-900 dark:text-white">
             How CropCredit Helps
