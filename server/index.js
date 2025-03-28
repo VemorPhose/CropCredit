@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import { registerUser, loginUser, logoutUser } from "./auth/user.js";
 import { authenticateToken } from "./middlewares/auth_middleware.js";
+import profileRouter from "./routes/profile.js";
 
 dotenv.config();
 
@@ -28,6 +29,8 @@ app.post("/api/auth/logout", logoutUser);
 app.get("/api/auth/me", authenticateToken, (req, res) => {
   res.json({ user: req.user });
 });
+
+app.use(profileRouter);
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
