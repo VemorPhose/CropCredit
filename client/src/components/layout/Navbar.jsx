@@ -43,13 +43,13 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-6">
             <Link
               to="/government-schemes"
-              className="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400"
+              className="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 font-medium"
             >
               Schemes
             </Link>
             <Link
               to="/credit-analysis"
-              className="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400"
+              className="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 font-medium"
             >
               Credit Analysis
             </Link>
@@ -62,19 +62,19 @@ const Navbar = () => {
                       ? "/farmer-dashboard"
                       : "/lender-dashboard"
                   }
-                  className="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400"
+                  className="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 font-medium"
                 >
                   Dashboard
                 </Link>
                 <Link
                   to="/profile"
-                  className="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400"
+                  className="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 font-medium"
                 >
                   Profile
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400"
+                  className="text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 font-medium"
                 >
                   Logout
                 </button>
@@ -83,13 +83,13 @@ const Navbar = () => {
               <>
                 <Link
                   to="/login"
-                  className="px-2 py-2 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400"
+                  className="px-2 py-2 text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 font-medium"
                 >
                   Login
                 </Link>
                 <Link
                   to="/register"
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md"
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-medium"
                 >
                   Register
                 </Link>
@@ -126,14 +126,14 @@ const Navbar = () => {
           <div className="md:hidden py-4 space-y-2">
             <Link
               to="/government-schemes"
-              className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 font-medium"
               onClick={() => setIsMenuOpen(false)}
             >
               Schemes
             </Link>
             <Link
               to="/credit-analysis"
-              className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 font-medium"
               onClick={() => setIsMenuOpen(false)}
             >
               Credit Analysis
@@ -147,14 +147,14 @@ const Navbar = () => {
                       ? "/farmer-dashboard"
                       : "/lender-dashboard"
                   }
-                  className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 font-medium"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Dashboard
                 </Link>
                 <Link
                   to="/profile"
-                  className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 font-medium"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Profile
@@ -164,7 +164,7 @@ const Navbar = () => {
                     handleLogout();
                     setIsMenuOpen(false);
                   }}
-                  className="block w-full text-left px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  className="block w-full text-left px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 font-medium"
                 >
                   Logout
                 </button>
@@ -173,14 +173,14 @@ const Navbar = () => {
               <>
                 <Link
                   to="/login"
-                  className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 font-medium"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Login
                 </Link>
                 <Link
                   to="/register"
-                  className="block px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md"
+                  className="block px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Register
