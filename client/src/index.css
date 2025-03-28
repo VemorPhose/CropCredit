@@ -260,6 +260,20 @@ html, body {
   background: #22C55E; /* green-500 for dark mode */
 }
 
+.message-content {
+  display: flex;
+  flex-direction: column;
+  max-width: 75%;
+}
+
+.navigation-buttons {
+  margin-top: 8px;
+}
+
+.navigation-buttons button {
+  transition: all 0.3s ease;
+}
+
 .chat-footer {
   position: absolute;
   bottom: 0;

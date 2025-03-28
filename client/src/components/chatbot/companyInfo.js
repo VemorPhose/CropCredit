@@ -56,3 +56,59 @@ We're constantly evolving to serve you better. Our upcoming features include:
   - Enhanced verification services that increase your credibility with lending institutions
 
 At CropCredit, we believe in empowering farmers with the right financial tools and knowledge to help you thrive. Whether you need assistance with credit planning or accessing government support, we're here to make the process simple, efficient, and successful.`;
+
+// Mapping of intents to site pages
+export const siteNavigationMap = {
+  "credit analysis": {
+    path: "/credit-analysis",
+    description: "Credit Analysis"
+  },
+  "credit score": {
+    path: "/credit-analysis",
+    description: "Credit Analysis"
+  },
+  "loan eligibility": {
+    path: "/credit-analysis",
+    description: "Credit Analysis"
+  },
+  "government schemes": {
+    path: "/government-schemes",
+    description: "Government Schemes"
+  },
+  "government scheme": {
+    path: "/government-schemes",
+    description: "Government Schemes"
+  },
+  "schemes": {
+    path: "/government-schemes",
+    description: "Government Schemes"
+  },
+  "login": {
+    path: "/login",
+    description: "Login"
+  },
+  "register": {
+    path: "/register",
+    description: "Register"
+  },
+  "signup": {
+    path: "/register",
+    description: "Register"
+  },
+  "sign up": {
+    path: "/register",
+    description: "Register"
+  },
+  "dashboard": {
+    path: "/farmer-dashboard",
+    description: "Dashboard"
+  },
+  "profile": {
+    path: "/profile",
+    description: "Profile"
+  },
+  "home": {
+    path: "/",
+    description: "Home"
+  }
+};

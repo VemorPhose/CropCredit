@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState, useContext } from "react";
 import { ThemeContext } from "../context/ThemeContext";
-import { X, MessageCircle } from "lucide-react"; // Import both icons from Lucide
+import { X, MessageCircle, ExternalLink } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import ChatbotIcon from "./chatbot/ChatbotIcon";
 import ChatForm from "./chatbot/Chatform.jsx";
 import ChatMessage from "./chatbot/ChatMessage";
-import { companyInfo } from "./chatbot/companyInfo.js";
+import { companyInfo, siteNavigationMap } from "./chatbot/companyInfo.js";
 import "../index.css";
 
 function ChatBot() {
   const { theme } = useContext(ThemeContext);
   const chatBodyRef = useRef();
+  const navigate = useNavigate();
   const [showChatbot, setShowChatbot] = useState(false);
   const [chatHistory, setChatHistory] = useState([
     {
@@ -18,46 +20,127 @@ function ChatBot() {
       text: companyInfo,
     },
   ]);
-  const generateBotResponse = async (history) => {
-    // Helper function to update chat history
-    const updateHistory = (text, isError = false) => {
-      setChatHistory((prev) => [
-        ...prev.filter((msg) => msg.text != "Thinking..."),
-        { role: "model", text, isError },
-      ]);
-    };
-    // Format chat history for API request
-    history = history.map(({ role, text }) => ({ role, parts: [{ text }] }));
-    const requestOptions = {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contents: history }),
-    };
-    try {
-      // Make the API call to get the bot's response
-      const response = await fetch(
-        import.meta.env.VITE_API_URL,
-        requestOptions
-      );
-      const data = await response.json();
-      if (!response.ok)
-        throw new Error(data?.error.message || "Something went wrong!");
-      const apiResponseText = data.candidates[0].content.parts[0].text
-        .replace(/\*\*(.*?)\*\*/g, "$1")
-        .trim();
-      updateHistory(apiResponseText);
-    } catch (error) {
-      // Update chat history with the error message
-      updateHistory(error.message, true);
+  
+  // Check if query might match any site navigation intent
+  const checkForNavigation = (query) => {
+    const lowercaseQuery = query.toLowerCase();
+    let matches = [];
+    
+    // Check if any navigation keywords are in the query
+    for (const [intent, pageInfo] of Object.entries(siteNavigationMap)) {
+      if (lowercaseQuery.includes(intent)) {
+        matches.push({
+          intent,
+          navigationInfo: pageInfo
+        });
+      }
+    }
+    
+    return matches.length > 0 ? { hasMatch: true, matches } : { hasMatch: false };
+  };
+
+  // Generate response for non-navigation queries
+  const generateGenericResponse = (query) => {
+    // Simplified answering logic based on query category
+    const lowercaseQuery = query.toLowerCase();
+    
+    // Farm financing related questions
+    if (lowercaseQuery.includes('loan') || lowercaseQuery.includes('finance') || lowercaseQuery.includes('credit')) {
+      return "CropCredit offers customized loan options based on your farm profile and credit score. We analyze factors like land holdings, crop types, and farming experience to provide the best loan terms.";
+    }
+    
+    // Crop related questions
+    else if (lowercaseQuery.includes('crop') || lowercaseQuery.includes('farm')) {
+      return "Our platform takes into account your specific crop types and farming patterns to provide tailored financial recommendations. Different crops have different risk profiles and seasonal needs that we factor into our analysis.";
+    }
+    
+    // About company/service questions
+    else if (lowercaseQuery.includes('about') || lowercaseQuery.includes('service') || lowercaseQuery.includes('what do you')) {
+      return "CropCredit is a one-stop financial solution for farmers that bridges the gap between agricultural needs and financial services. We provide credit analysis, government scheme matching, and financial guidance tailored to your farming context.";
+    }
+    
+    // Fallback for other questions
+    else {
+      return "I can provide information about agricultural financing, government schemes for farmers, credit analysis, and more. Feel free to ask specific questions about how CropCredit can help with your farming financial needs.";
     }
   };
+
+  const generateBotResponse = async (history) => {
+    // Helper function to update chat history
+    const updateHistory = (text, isError = false, includeNavLink = false, navLinks = []) => {
+      setChatHistory((prev) => [
+        ...prev.filter((msg) => msg.text !== "Thinking..."),
+        { role: "model", text, isError, includeNavLink, navLinks },
+      ]);
+    };
+
+    try {
+      // Get user's last message
+      const userMessage = history[history.length - 1].text;
+      
+      // Add thinking indicator
+      setChatHistory((prev) => [...prev, { role: "model", text: "Thinking..." }]);
+      
+      // Check for navigation-related query
+      const { hasMatch, matches } = checkForNavigation(userMessage);
+      
+      // Simulate processing delay
+      setTimeout(() => {
+        if (hasMatch) {
+          // For navigation matches, provide concise answer + links
+          const uniqueMatches = Array.from(
+            new Map(matches.map(item => [item.navigationInfo.path, item])).values()
+          );
+          
+          // Generate a relevant text response based on the type of page matched
+          let responseText = "";
+          
+          if (matches.some(m => m.intent.includes("credit") || m.intent.includes("loan"))) {
+            responseText = "I can help you check your credit score and loan eligibility. Our credit analysis tool evaluates your farming profile to provide personalized recommendations.";
+          } 
+          else if (matches.some(m => m.intent.includes("scheme"))) {
+            responseText = "We can help you discover government schemes you're eligible for. Our platform matches your profile with available programs to maximize your benefits.";
+          }
+          else if (matches.some(m => m.intent.includes("login") || m.intent.includes("register"))) {
+            responseText = "You can access your account or create a new one to use all our features.";
+          }
+          else {
+            responseText = "I found relevant pages on our website that might help you:";
+          }
+          
+          // Update with both text response and navigation links
+          updateHistory(responseText, false, true, uniqueMatches.map(match => ({
+            text: match.navigationInfo.description,
+            path: match.navigationInfo.path
+          })));
+        } else {
+          // For general queries, provide a helpful response without navigation links
+          const response = generateGenericResponse(userMessage);
+          updateHistory(response);
+        }
+      }, 1000);
+      
+    } catch (error) {
+      console.error("Error generating response:", error);
+      updateHistory("Sorry, I encountered an error processing your request. Please try again.", true);
+    }
+  };
+
+  // Handle navigation when a link is clicked
+  const handleNavigation = (path) => {
+    setShowChatbot(false); // Close the chatbot
+    navigate(path); // Navigate to the page
+  };
+
   useEffect(() => {
-    // Auto-scroll whenever chat history updates
-    chatBodyRef.current.scrollTo({
-      top: chatBodyRef.current.scrollHeight,
-      behavior: "smooth",
-    });
+    if (chatBodyRef.current) {
+      chatBodyRef.current.scrollTo({
+        top: chatBodyRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }
   }, [chatHistory]);
+
   return (
     <div className={`container ${showChatbot ? "show-chatbot" : ""}`}>
       <button
@@ -85,20 +168,25 @@ function ChatBot() {
             <X size={24} color="white" strokeWidth={2} />
           </button>
         </div>
-        {/* Chatbot Body */}
+        
         <div ref={chatBodyRef} className="chat-body">
           <div className="message bot-message">
             <ChatbotIcon />
             <p className="message-text">
-              Hey there <br /> How can I help you today?
+              Hey there! I'm Mr. Credit, your CropCredit assistant.<br />
+              How can I help you today?
             </p>
           </div>
-          {/* Render the chat history dynamically */}
+          
           {chatHistory.map((chat, index) => (
-            <ChatMessage key={index} chat={chat} />
+            <ChatMessage 
+              key={index} 
+              chat={chat} 
+              onNavigate={handleNavigation}
+            />
           ))}
         </div>
-        {/* Chatbot Footer */}
+        
         <div className="chat-footer">
           <ChatForm
             chatHistory={chatHistory}
