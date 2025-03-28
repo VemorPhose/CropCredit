@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useContext } from "react";
+import { ThemeContext } from "../context/ThemeContext";
+import { X, MessageCircle } from "lucide-react"; // Import both icons from Lucide
 import ChatbotIcon from "./chatbot/ChatbotIcon";
 import ChatForm from "./chatbot/Chatform.jsx";
 import ChatMessage from "./chatbot/ChatMessage";
@@ -6,6 +8,7 @@ import { companyInfo } from "./chatbot/companyInfo.js";
 import "../index.css";
 
 function ChatBot() {
+  const { theme } = useContext(ThemeContext);
   const chatBodyRef = useRef();
   const [showChatbot, setShowChatbot] = useState(false);
   const [chatHistory, setChatHistory] = useState([
@@ -61,21 +64,25 @@ function ChatBot() {
         onClick={() => setShowChatbot((prev) => !prev)}
         id="chatbot-toggler"
       >
-        <span className="material-symbols-rounded">mode_comment</span>
-        <span className="material-symbols-rounded">close</span>
+        <span className="chat-icon">
+          <MessageCircle size={24} color="white" strokeWidth={2} />
+        </span>
+        <span className="close-icon">
+          <X size={24} color="white" strokeWidth={2} />
+        </span>
       </button>
       <div className="chatbot-popup">
         {/* Chatbot Header */}
         <div className="chat-header">
           <div className="header-info">
             <ChatbotIcon />
-            <h2 className="logo-text">Chatbot</h2>
+            <h2 className="logo-text">Mr. Credit</h2>
           </div>
           <button
             onClick={() => setShowChatbot((prev) => !prev)}
-            className="material-symbols-rounded"
+            className="flex items-center justify-center" 
           >
-            keyboard_arrow_down
+            <X size={24} color="white" strokeWidth={2} />
           </button>
         </div>
         {/* Chatbot Body */}
@@ -103,4 +110,5 @@ function ChatBot() {
     </div>
   );
 }
+
 export default ChatBot;
