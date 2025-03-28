@@ -6,6 +6,7 @@ import ChatbotIcon from "./chatbot/ChatbotIcon";
 import ChatForm from "./chatbot/Chatform.jsx";
 import ChatMessage from "./chatbot/ChatMessage";
 import { companyInfo, siteNavigationMap } from "./chatbot/companyInfo.js";
+import farmSvg from "../assets/farm-svgrepo-com.svg";
 import "../index.css";
 
 function ChatBot() {
@@ -148,18 +149,22 @@ function ChatBot() {
         id="chatbot-toggler"
       >
         <span className="chat-icon">
-          <MessageCircle size={24} color="white" strokeWidth={2} />
+          <MessageCircle size={25} color="white" strokeWidth={2} />
         </span>
         <span className="close-icon">
           <X size={24} color="white" strokeWidth={2} />
         </span>
       </button>
       <div className="chatbot-popup">
-        {/* Chatbot Header */}
+        {/* Chatbot Header - Updated with CropCredit logo */}
         <div className="chat-header">
           <div className="header-info">
-            <ChatbotIcon />
-            <h2 className="logo-text">Mr. Credit</h2>
+            <img 
+              src={farmSvg} 
+              alt="CropCredit Logo" 
+              className="h-8 w-8 bg-white dark:bg-gray-800 rounded-full p-1"
+            />
+            <h2 className="logo-text">CropCredit Assistant</h2>
           </div>
           <button
             onClick={() => setShowChatbot((prev) => !prev)}
@@ -173,7 +178,7 @@ function ChatBot() {
           <div className="message bot-message">
             <ChatbotIcon />
             <p className="message-text">
-              Hey there! I'm Mr. Credit, your CropCredit assistant.<br />
+              Hey there! I'm your CropCredit assistant.<br />
               How can I help you today?
             </p>
           </div>

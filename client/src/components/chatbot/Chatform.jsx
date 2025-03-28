@@ -1,32 +1,32 @@
 import { useRef } from "react";
+import { ArrowUp } from "lucide-react"; 
+
 const ChatForm = ({ chatHistory, setChatHistory, generateBotResponse }) => {
   const inputRef = useRef();
+
   const handleFormSubmit = (e) => {
     e.preventDefault();
     const userMessage = inputRef.current.value.trim();
     if (!userMessage) return;
+    
     inputRef.current.value = "";
+    
     // Update chat history with the user's message
     setChatHistory((history) => [
       ...history,
       { role: "user", text: userMessage },
     ]);
-    // Delay 600 ms before showing "Thinking..." and generating response
-    setTimeout(() => {
-      // Add a "Thinking..." placeholder for the bot's response
-      setChatHistory((history) => [
-        ...history,
-        { role: "model", text: "Thinking..." },
-      ]);
-      generateBotResponse([
-        ...chatHistory,
-        {
-          role: "user",
-          text: `Using the details provided above, please address this query: ${userMessage}`,
-        },
-      ]);
-    }, 600);
+    
+    // Remove the duplicate "Thinking..." message and just call generateBotResponse directly
+    generateBotResponse([
+      ...chatHistory,
+      {
+        role: "user",
+        text: `Using the details provided above, please address this query: ${userMessage}`,
+      },
+    ]);
   };
+  
   return (
     <form onSubmit={handleFormSubmit} className="chat-form">
       <input
@@ -38,11 +38,15 @@ const ChatForm = ({ chatHistory, setChatHistory, generateBotResponse }) => {
       <button
         type="submit"
         id="send-message"
-        className="material-symbols-rounded"
+        aria-label="Send message"
+        className="flex items-center justify-center"
       >
-        arrow_upward
+        <div className="flex items-center justify-center w-full h-full">
+          <ArrowUp size={18} />
+        </div>
       </button>
     </form>
   );
 };
+
 export default ChatForm;
