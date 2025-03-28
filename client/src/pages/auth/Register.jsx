@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { Eye, EyeOff } from "lucide-react";
-import { supabase } from "../../lib/supabase";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -41,31 +40,15 @@ const Register = () => {
     setIsLoading(true);
 
     try {
-      // Register with Supabase Auth with user metadata
-      const { data, error } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            name: formData.name,
-            role: formData.role,
-            // Store initial user data in metadata
-            initial_setup_needed: true,
-          },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-
-      if (error) throw error;
-
-      // Show success message
-      alert(
-        "Registration successful! Please check your email for confirmation link."
+      await register(
+        formData.name,
+        formData.email,
+        formData.password,
+        formData.role
       );
       navigate("/login");
     } catch (err) {
-      console.error("Registration error:", err);
-      setError(err.message || "Registration failed. Please try again.");
+      setError("Registration failed. Please try again.");
     } finally {
       setIsLoading(false);
     }

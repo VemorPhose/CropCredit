@@ -12,7 +12,6 @@ import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import PrivateRoute from "./components/auth/PrivateRoute";
 import NotFound from "./pages/NotFound";
-import AuthCallback from "./pages/auth/AuthCallback";
 
 function App() {
   return (
@@ -54,7 +53,6 @@ function App() {
                   </PrivateRoute>
                 }
               />
-              <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { Eye, EyeOff } from "lucide-react";
-import { supabase } from "../../lib/supabase";
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -32,35 +31,8 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const {
-        data: { user },
-        error,
-      } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password,
-      });
-
-      if (error) throw error;
-
-      // Check if email is confirmed
-      if (!user.email_confirmed_at) {
-        setError("Please confirm your email before logging in");
-        return;
-      }
-
-      // Get user details including role
-      const { data: userData, error: roleError } = await supabase
-        .from("users")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-
-      if (roleError) throw roleError;
-
-      // Redirect based on role
-      navigate(
-        userData.role === "farmer" ? "/farmer-dashboard" : "/lender-dashboard"
-      );
+      await login(formData.email, formData.password);
+      navigate("/");
     } catch (err) {
       setError(err.message || "Invalid email or password. Please try again.");
     } finally {
