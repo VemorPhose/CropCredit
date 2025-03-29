@@ -544,9 +544,6 @@ const CreditAnalysis = () => {
             >
               Edit Information
             </button>
-            <button className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md font-medium">
-              Download Report
-            </button>
           </div>
         </div>
       )}
