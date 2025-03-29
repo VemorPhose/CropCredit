@@ -14,7 +14,7 @@ const ChatMessage = ({ chat, onNavigate }) => {
   } else {
     return (
       <div className={`message bot-message ${chat.isError ? "error" : ""}`}>
-        <ChatbotIcon />
+        <ChatbotIcon size="small" />
         <div className="message-content">
           <p className="message-text">{chat.text}</p>
           

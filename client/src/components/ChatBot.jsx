@@ -278,7 +278,7 @@ function ChatBot() {
 
         <div ref={chatBodyRef} className="chat-body">
           <div className="message bot-message">
-            <ChatbotIcon />
+            <ChatbotIcon size="small" />
             <p className="message-text">
               Hey there! I'm your CropCredit assistant.
               <br />
