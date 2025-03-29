@@ -189,11 +189,11 @@ const FarmerDashboard = () => {
                 </>
               )}
             </p>
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mt-4">
               <div
                 className={`h-2.5 rounded-full ${
                   dashboardData.creditScore === 0
-                    ? "bg-gray-400"
+                    ? "bg-red-600"
                     : dashboardData.creditScore >= 750
                     ? "bg-green-600"
                     : dashboardData.creditScore >= 650
@@ -205,32 +205,32 @@ const FarmerDashboard = () => {
                 style={{
                   width:
                     dashboardData.creditScore === 0
-                      ? "0%"
-                      : `${(dashboardData.creditScore / 850) * 100}%`,
+                      ? "1%" // Show 1% width for empty/zero score
+                      : dashboardData.creditScore < 550
+                      ? "1%" // Show 1% width for scores below threshold
+                      : dashboardData.creditScore > 750
+                      ? "100%"
+                      : `${((dashboardData.creditScore - 550) / (750 - 550)) * 100}%`,
                 }}
               ></div>
             </div>
             <div className="flex justify-between mt-2 text-sm text-gray-600 dark:text-gray-400">
-              <span>
-                Poor
-                <br />
-                (Below 550)
-              </span>
-              <span>
-                Fair
-                <br />
-                (550-649)
-              </span>
-              <span>
-                Good
-                <br />
-                (650-749)
-              </span>
-              <span>
-                Excellent
-                <br />
-                (750+)
-              </span>
+              <div className="flex flex-col items-center">
+                <span className="font-medium">550</span>
+                <span className="text-xs">Poor</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="font-medium">600</span>
+                <span className="text-xs">Fair</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="font-medium">650</span>
+                <span className="text-xs">Good</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="font-medium">750</span>
+                <span className="text-xs">Excellent</span>
+              </div>
             </div>
           </div>
         </div>
