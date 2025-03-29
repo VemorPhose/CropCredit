@@ -1,3 +1,8 @@
 flask==2.3.2
-python-dotenv==1.0.0
-huggingface-hub==0.15.1
+huggingface-hub>=0.20.3
+python-dotenv>=1.0.1
+supabase>=2.3.1
+numpy>=1.26.4  # Common dependency for ML/data processing
+pandas>=2.2.1  # Useful for data manipulation
+scikit-learn>=1.4.1  # For any ML computations
+requests>=2.31.0  # Required by huggingface-hub
