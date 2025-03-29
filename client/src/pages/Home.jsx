@@ -128,18 +128,28 @@ const Home = () => {
       <section className="py-12">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white">
-            Ready to Get Started?
+            {user ? "Access Your Dashboard" : "Ready to Get Started?"}
           </h2>
           <p className="text-xl mb-8 max-w-2xl mx-auto text-gray-700 dark:text-gray-300">
-            Join thousands of farmers who have improved their access to credit
-            and government schemes.
+            {user 
+              ? "Continue to your personalized dashboard to manage your financial information."
+              : "Join thousands of farmers who have improved their access to credit and government schemes."}
           </p>
-          <Link
-            to="/register"
-            className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-md font-medium inline-block"
-          >
-            Create Your Account
-          </Link>
+          {user ? (
+            <Link
+              to={user.role === "farmer" ? "/farmer-dashboard" : "/lender-dashboard"}
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-md font-medium inline-flex items-center gap-2"
+            >
+              Go to Dashboard <ArrowRight size={20} />
+            </Link>
+          ) : (
+            <Link
+              to="/register"
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-md font-medium inline-block"
+            >
+              Create Your Account
+            </Link>
+          )}
         </div>
       </section>
     </div>
