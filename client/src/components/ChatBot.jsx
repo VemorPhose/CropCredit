@@ -27,7 +27,34 @@ function ChatBot() {
     const lowercaseQuery = query.toLowerCase();
     let matches = [];
 
-    // Check if any navigation keywords are in the query
+    // Hindi language keywords mapping to English navigation intents
+    const hindiKeywords = {
+      "ऋृण": "loan",         // Loan
+      "उधार": "loan",         // Loan/Borrowing
+      "वित्त": "finance",     // Finance
+      "धन उधार": "loan",     // Money borrowing
+      "जमा धन": "credit",    // Deposited money/credit
+      "सरकारी योजनाएं": "scheme", // Government schemes
+      "सरकार": "scheme"       // Government
+    };
+
+    // Check if any Hindi keywords are in the query
+    for (const [hindi, englishIntent] of Object.entries(hindiKeywords)) {
+      if (query.includes(hindi)) {
+        // Find the corresponding navigation info for this English intent
+        for (const [intent, pageInfo] of Object.entries(siteNavigationMap)) {
+          if (intent.includes(englishIntent)) {
+            matches.push({
+              intent: englishIntent,
+              navigationInfo: pageInfo,
+            });
+            break; // Found a match for this Hindi term
+          }
+        }
+      }
+    }
+
+    // Check if any navigation keywords are in the query (existing English check)
     for (const [intent, pageInfo] of Object.entries(siteNavigationMap)) {
       if (lowercaseQuery.includes(intent)) {
         matches.push({
