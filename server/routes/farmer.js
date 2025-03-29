@@ -18,16 +18,7 @@ router.get("/api/farmer/dashboard", authenticateToken, async (req, res) => {
 
     if (profileError) throw profileError;
 
-    // Get loan eligibility from loan_applications
-    const { data: loanData, error: loanError } = await supabase
-      .from("loan_applications")
-      .select("amount, status, interest_rate, term")
-      .eq("farmer_id", profile.id)
-      .eq("status", "approved")
-      .order("created_at", { ascending: false })
-      .limit(1);
-
-    // Get eligible government schemes
+    // Get eligible schemes with details
     const { data: schemes, error: schemesError } = await supabase
       .from("farmer_scheme_eligibility")
       .select(
@@ -38,13 +29,16 @@ router.get("/api/farmer/dashboard", authenticateToken, async (req, res) => {
           id,
           name,
           description,
-          benefits
+          benefits,
+          category
         )
       `
       )
       .eq("farmer_id", profile.id)
       .order("eligibility_score", { ascending: false })
       .limit(3);
+
+    if (schemesError) throw schemesError;
 
     // Get recent activity
     const { data: recentActivity, error: activityError } = await supabase
@@ -54,18 +48,24 @@ router.get("/api/farmer/dashboard", authenticateToken, async (req, res) => {
       .order("created_at", { ascending: false })
       .limit(3);
 
+    if (activityError) throw activityError;
+
     res.json({
       profile,
-      loanEligibility: loanData?.[0] || null,
-      eligibleSchemes:
-        schemes?.map((s) => ({
-          id: s.government_schemes.id,
-          name: s.government_schemes.name,
-          description: s.government_schemes.description,
-          eligibility: s.eligibility_score >= 75 ? "High" : "Medium",
-          status: s.status,
-        })) || [],
-      recentActivity,
+      eligibleSchemes: schemes.map((s) => ({
+        id: s.government_schemes.id,
+        name: s.government_schemes.name,
+        description: s.government_schemes.description,
+        benefits: s.government_schemes.benefits,
+        category: s.government_schemes.category,
+        eligibility: s.eligibility_score >= 75 ? "High" : "Medium",
+        status: s.status,
+      })),
+      recentActivity: recentActivity.map((activity) => ({
+        title: "Credit Score Updated",
+        description: `Your credit score was updated to ${activity.credit_score}`,
+        created_at: activity.created_at,
+      })),
     });
   } catch (error) {
     console.error("Dashboard fetch error:", error);

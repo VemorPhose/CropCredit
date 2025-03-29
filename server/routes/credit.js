@@ -16,6 +16,15 @@ router.post("/api/credit/analyze", authenticateToken, async (req, res) => {
     const userId = req.user.id;
     const formData = req.body;
 
+    // Get farmer profile ID
+    const { data: farmerProfile, error: profileError } = await supabase
+      .from("farmer_profiles")
+      .select("id")
+      .eq("user_id", userId)
+      .single();
+
+    if (profileError) throw profileError;
+
     // Launch Python script for credit score calculation
     const scriptPath = path.join(
       __dirname,
@@ -38,7 +47,6 @@ router.post("/api/credit/analyze", authenticateToken, async (req, res) => {
 
     pythonProcess.stderr.on("data", (data) => {
       error += data.toString();
-      console.error("Python error:", data.toString());
     });
 
     pythonProcess.on("close", async (code) => {
@@ -52,8 +60,8 @@ router.post("/api/credit/analyze", authenticateToken, async (req, res) => {
       try {
         const analysisResult = JSON.parse(result);
 
-        // Store credit evaluation in database
-        const { data: evaluation, error: dbError } = await supabase
+        // Store credit evaluation
+        const { data: evaluation, error: evalError } = await supabase
           .from("credit_evaluations")
           .insert({
             user_id: userId,
@@ -61,14 +69,13 @@ router.post("/api/credit/analyze", authenticateToken, async (req, res) => {
             risk_factors: analysisResult.riskFactors,
             loan_eligibility: analysisResult.loanEligibility,
             input_data: formData,
-            algorithm_version: "1.0",
           })
           .select()
           .single();
 
-        if (dbError) throw dbError;
+        if (evalError) throw evalError;
 
-        // Update farmer profile with new credit score
+        // Update farmer profile
         const { error: updateError } = await supabase
           .from("farmer_profiles")
           .update({ credit_score: analysisResult.score })
@@ -76,12 +83,35 @@ router.post("/api/credit/analyze", authenticateToken, async (req, res) => {
 
         if (updateError) throw updateError;
 
+        // Get all government schemes
+        const { data: schemes, error: schemesError } = await supabase
+          .from("government_schemes")
+          .select("*");
+
+        if (schemesError) throw schemesError;
+
+        // Calculate eligibility for each scheme
+        const schemeEligibility = schemes.map((scheme) => ({
+          farmer_id: farmerProfile.id,
+          scheme_id: scheme.id,
+          eligibility_score: calculateSchemeEligibility(analysisResult, scheme),
+          status: "eligible",
+        }));
+
+        // Update scheme eligibility
+        const { error: eligibilityError } = await supabase
+          .from("farmer_scheme_eligibility")
+          .upsert(schemeEligibility, {
+            onConflict: "farmer_id,scheme_id",
+            returning: true,
+          });
+
+        if (eligibilityError) throw eligibilityError;
+
         res.json(analysisResult);
       } catch (e) {
         console.error("Database error:", e);
-        res
-          .status(500)
-          .json({ error: "Failed to store credit analysis results" });
+        res.status(500).json({ error: "Failed to store analysis results" });
       }
     });
   } catch (error) {
@@ -89,5 +119,34 @@ router.post("/api/credit/analyze", authenticateToken, async (req, res) => {
     res.status(500).json({ error: "Failed to process credit analysis" });
   }
 });
+
+// Helper function to calculate scheme eligibility
+function calculateSchemeEligibility(analysis, scheme) {
+  const score = analysis.score;
+  let eligibilityScore = 0;
+
+  // Basic eligibility based on credit score
+  if (score >= 750) eligibilityScore += 40;
+  else if (score >= 650) eligibilityScore += 30;
+  else if (score >= 550) eligibilityScore += 20;
+  else eligibilityScore += 10;
+
+  // Additional criteria based on scheme category
+  switch (scheme.category) {
+    case "Credit":
+      eligibilityScore += score >= 650 ? 35 : 20;
+      break;
+    case "Infrastructure":
+      eligibilityScore += analysis.details.landHolding >= 5 ? 35 : 20;
+      break;
+    case "Technical Support":
+      eligibilityScore += analysis.details.farmingExperience >= 5 ? 35 : 20;
+      break;
+    default:
+      eligibilityScore += 25;
+  }
+
+  return eligibilityScore;
+}
 
 export default router;

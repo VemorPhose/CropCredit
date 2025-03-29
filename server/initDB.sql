@@ -161,18 +161,6 @@ CREATE TABLE chatbot_interactions (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Add this to initDB.sql if not already present
-CREATE TABLE IF NOT EXISTS credit_evaluations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    credit_score INTEGER NOT NULL,
-    risk_factors JSONB,
-    loan_eligibility JSONB,
-    input_data JSONB,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
 -- Initial seed data for government schemes
 INSERT INTO government_schemes (name, description, eligibility, benefits, category) VALUES
 ('PM-KISAN', 'Pradhan Mantri Kisan Samman Nidhi provides income support of ₹6,000 per year to all farmer families across the country in three equal installments of ₹2,000 each every four months.', 'All farmer families with cultivable land.', 'Direct income support of ₹6,000 per year.', 'Income Support'),
