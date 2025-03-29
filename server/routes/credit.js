@@ -16,14 +16,31 @@ router.post("/api/credit/analyze", authenticateToken, async (req, res) => {
     const userId = req.user.id;
     const formData = req.body;
 
-    // Get farmer profile ID
-    const { data: farmerProfile, error: profileError } = await supabase
+    // First get farmer profile id since we need it for scheme eligibility
+    let { data: farmerProfile, error: profileError } = await supabase
       .from("farmer_profiles")
       .select("id")
       .eq("user_id", userId)
       .single();
 
-    if (profileError) throw profileError;
+    if (profileError) {
+      // Create farmer profile if it doesn't exist
+      const { data: newProfile, error: createError } = await supabase
+        .from("farmer_profiles")
+        .insert({
+          user_id: userId,
+          land_holding: formData.landHolding,
+          primary_crop: formData.cropType,
+          annual_income: formData.annualIncome,
+          farming_experience: formData.farmingExperience,
+          irrigation_source: formData.irrigationSource,
+        })
+        .select()
+        .single();
+
+      if (createError) throw createError;
+      farmerProfile = newProfile;
+    }
 
     // Launch Python script for credit score calculation
     const scriptPath = path.join(
@@ -75,11 +92,11 @@ router.post("/api/credit/analyze", authenticateToken, async (req, res) => {
 
         if (evalError) throw evalError;
 
-        // Update farmer profile
+        // Update farmer profile with new credit score
         const { error: updateError } = await supabase
           .from("farmer_profiles")
           .update({ credit_score: analysisResult.score })
-          .eq("user_id", userId);
+          .eq("id", farmerProfile.id);
 
         if (updateError) throw updateError;
 
@@ -92,7 +109,7 @@ router.post("/api/credit/analyze", authenticateToken, async (req, res) => {
 
         // Calculate eligibility for each scheme
         const schemeEligibility = schemes.map((scheme) => ({
-          farmer_id: farmerProfile.id,
+          farmer_id: farmerProfile.id, // Changed from user_id to farmer_id
           scheme_id: scheme.id,
           eligibility_score: calculateSchemeEligibility(analysisResult, scheme),
           status: "eligible",
@@ -102,13 +119,22 @@ router.post("/api/credit/analyze", authenticateToken, async (req, res) => {
         const { error: eligibilityError } = await supabase
           .from("farmer_scheme_eligibility")
           .upsert(schemeEligibility, {
-            onConflict: "farmer_id,scheme_id",
+            onConflict: "farmer_id,scheme_id", // Updated conflict columns
             returning: true,
           });
 
         if (eligibilityError) throw eligibilityError;
 
-        res.json(analysisResult);
+        // Return analysis result with schemes
+        res.json({
+          ...analysisResult,
+          eligibleSchemes: schemes.map((scheme) => ({
+            ...scheme,
+            eligibility_score: schemeEligibility.find(
+              (se) => se.scheme_id === scheme.id
+            )?.eligibility_score,
+          })),
+        });
       } catch (e) {
         console.error("Database error:", e);
         res.status(500).json({ error: "Failed to store analysis results" });
