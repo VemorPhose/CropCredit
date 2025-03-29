@@ -1,9 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowRight, Check, AlertCircle, X } from "lucide-react";
+import { useState, useRef } from "react";
+import { ArrowRight, Check, AlertCircle, X, Download } from "lucide-react";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
+import { useAuth } from "../hooks/useAuth";
 
 const CreditAnalysis = () => {
+  const { user } = useAuth();
+  const printRef = useRef(null);
   const [formData, setFormData] = useState({
     landHolding: "",
     cropType: "",
@@ -20,6 +25,7 @@ const CreditAnalysis = () => {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showError, setShowError] = useState(false);
   const [error, setError] = useState(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -126,6 +132,75 @@ const CreditAnalysis = () => {
       setError(error.message || "Failed to analyze credit");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!printRef.current || !analysisResult) return;
+
+    setIsDownloading(true);
+
+    try {
+      const element = printRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: document.documentElement.classList.contains("dark")
+          ? "#1F2937"
+          : "#FFFFFF",
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      const pdf = new jsPDF("p", "mm", "a4");
+
+      // Add CropCredit letterhead
+      pdf.setFontSize(20);
+      pdf.setTextColor(22, 163, 74); // green-600
+      pdf.text("CropCredit", 20, 20);
+
+      pdf.setFontSize(12);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text("Credit Analysis Report", 20, 30);
+
+      const today = new Date();
+      pdf.setFontSize(10);
+      pdf.text(`Generated on: ${today.toLocaleDateString()}`, 20, 38);
+
+      if (user) {
+        pdf.text(`For: ${user.name} (${user.email})`, 20, 45);
+      }
+
+      pdf.line(20, 48, 190, 48); // Add horizontal line
+
+      // Add the captured image
+      pdf.addImage(imgData, "PNG", 0, 50, imgWidth, imgHeight);
+
+      // Add footer
+      const pageCount = Math.ceil(imgHeight / pageHeight) + 1;
+      pdf.setFontSize(8);
+      pdf.setTextColor(100, 100, 100);
+      pdf.text(
+        "This document is computer-generated and does not require a signature.",
+        20,
+        290
+      );
+      pdf.text(
+        "© CropCredit - Powering agricultural finance with AI",
+        105,
+        290,
+        { align: "center" }
+      );
+
+      pdf.save("CropCredit-Analysis-Report.pdf");
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -376,77 +451,96 @@ const CreditAnalysis = () => {
           </form>
         </div>
       ) : (
-        <div className="space-y-8">
-          {/* Credit Score Card */}
+        <div className="space-y-8" ref={printRef}>
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Your Credit Analysis Results
+            </h2>
+            <button
+              onClick={handleDownloadPDF}
+              disabled={isDownloading}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              {isDownloading ? "Processing..." : "Download Report"}
+              <Download size={18} />
+            </button>
+          </div>
+
+          {/* Credit Score */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="w-32 h-32 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                <span className="text-3xl font-bold text-green-600 dark:text-green-400">
-                  {analysisResult.creditScore}
-                </span>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+              Credit Score
+            </h3>
+            <div className="flex items-center">
+              <div className="relative w-full h-8 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div
+                  className={`h-full ${
+                    analysisResult.creditScore >= 750
+                      ? "bg-green-500"
+                      : analysisResult.creditScore >= 650
+                      ? "bg-green-400"
+                      : analysisResult.creditScore >= 550
+                      ? "bg-yellow-400"
+                      : "bg-red-400"
+                  }`}
+                  style={{
+                    width: `${(analysisResult.creditScore / 900) * 100}%`,
+                  }}
+                ></div>
               </div>
-              <div>
-                <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">
-                  Your Credit Score
-                </h2>
-                <p className="text-gray-700 dark:text-gray-300 mb-4">
-                  Your credit score is considered{" "}
-                  <span className="font-medium text-green-600 dark:text-green-400">
-                    Good
-                  </span>
-                  . This makes you eligible for most agricultural loan programs.
-                </p>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                  <div
-                    className="bg-green-600 h-2.5 rounded-full"
-                    style={{
-                      width: `${(analysisResult.creditScore / 850) * 100}%`,
-                    }}
-                  ></div>
-                </div>
-                <div className="flex justify-between mt-2 text-sm text-gray-600 dark:text-gray-400">
-                  <span>Poor</span>
-                  <span>Fair</span>
-                  <span>Good</span>
-                  <span>Excellent</span>
-                </div>
-              </div>
+              <span className="ml-4 text-2xl font-bold text-gray-900 dark:text-white">
+                {analysisResult.creditScore}
+              </span>
+            </div>
+            <div className="mt-2 flex justify-between text-sm">
+              <span className="text-red-500">Poor</span>
+              <span className="text-yellow-500">Fair</span>
+              <span className="text-green-500">Good</span>
+              <span className="text-green-700">Excellent</span>
             </div>
           </div>
 
           {/* Loan Eligibility */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
               Loan Eligibility
-            </h2>
-            <div className="grid md:grid-cols-4 gap-4">
-              <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Maximum Amount
+            </h3>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <p className="font-medium text-gray-700 dark:text-gray-300">
+                  Maximum Loan Amount
                 </p>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
                   {analysisResult.loanEligibility.maxAmount}
                 </p>
               </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+              <div>
+                <p className="font-medium text-gray-700 dark:text-gray-300">
                   Interest Rate
                 </p>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
                   {analysisResult.loanEligibility.interestRate}
                 </p>
               </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                <p className="text-sm text-gray-600 dark:text-gray-400">Term</p>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+              <div>
+                <p className="font-medium text-gray-700 dark:text-gray-300">
+                  Term
+                </p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
                   {analysisResult.loanEligibility.term}
                 </p>
               </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+              <div>
+                <p className="font-medium text-gray-700 dark:text-gray-300">
                   Status
                 </p>
-                <p className="text-lg font-semibold text-green-600 dark:text-green-400">
+                <p
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${
+                    analysisResult.loanEligibility.status === "Eligible"
+                      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                      : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+                  }`}
+                >
                   {analysisResult.loanEligibility.status}
                 </p>
               </div>
@@ -455,39 +549,58 @@ const CreditAnalysis = () => {
 
           {/* Risk Factors */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">
-              Risk Assessment
-            </h2>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+              Risk Factors
+            </h3>
             <div className="space-y-4">
               {analysisResult.riskFactors.map((factor, index) => (
-                <div
-                  key={index}
-                  className="flex items-start gap-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg"
-                >
+                <div key={index} className="flex items-start">
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      factor.status === "Excellent" || factor.status === "Good"
-                        ? "bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400"
+                    className={`flex-shrink-0 w-8 h-8 rounded-full ${
+                      factor.status === "Excellent"
+                        ? "bg-green-100 dark:bg-green-900"
+                        : factor.status === "Good"
+                        ? "bg-green-100 dark:bg-green-900"
                         : factor.status === "Medium"
-                        ? "bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-400"
-                        : "bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400"
-                    }`}
+                        ? "bg-yellow-100 dark:bg-yellow-900"
+                        : "bg-red-100 dark:bg-red-900"
+                    } flex items-center justify-center mr-3`}
                   >
-                    <Check size={16} />
+                    {factor.status === "Excellent" || factor.status === "Good" ? (
+                      <Check
+                        className={
+                          factor.status === "Excellent"
+                            ? "text-green-600 dark:text-green-300"
+                            : "text-green-600 dark:text-green-300"
+                        }
+                        size={16}
+                      />
+                    ) : factor.status === "Medium" ? (
+                      <AlertCircle
+                        className="text-yellow-600 dark:text-yellow-300"
+                        size={16}
+                      />
+                    ) : (
+                      <X
+                        className="text-red-600 dark:text-red-300"
+                        size={16}
+                      />
+                    )}
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-medium text-gray-900 dark:text-white">
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center">
+                      <h4 className="text-lg font-medium text-gray-900 dark:text-white">
                         {factor.factor}
-                      </h3>
+                      </h4>
                       <span
-                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                          factor.status === "Excellent" ||
-                          factor.status === "Good"
-                            ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
+                        className={`px-2 py-0.5 text-xs font-medium rounded ${
+                          factor.status === "Excellent"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                            : factor.status === "Good"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
                             : factor.status === "Medium"
-                            ? "bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200"
-                            : "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200"
+                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+                            : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
                         }`}
                       >
                         {factor.status}
@@ -502,52 +615,38 @@ const CreditAnalysis = () => {
             </div>
           </div>
 
-          {/* Eligible Schemes */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">
-              Recommended Government Schemes
-            </h2>
-            <div className="space-y-4">
-              {analysisResult.eligibleSchemes.map((scheme) => (
-                <div
-                  key={scheme.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900 rounded-lg"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center text-green-600 dark:text-green-400">
-                      {scheme.match}
-                    </div>
-                    <div>
-                      <h3 className="font-medium text-gray-900 dark:text-white">
+          {/* Eligible Government Schemes */}
+          {analysisResult.eligibleSchemes &&
+            analysisResult.eligibleSchemes.length > 0 && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                  Eligible Government Schemes
+                </h3>
+                <div className="space-y-4">
+                  {analysisResult.eligibleSchemes.map((scheme, index) => (
+                    <div
+                      key={index}
+                      className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg"
+                    >
+                      <h4 className="text-lg font-medium text-gray-900 dark:text-white">
                         {scheme.name}
-                      </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Match: {scheme.match}
+                      </h4>
+                      <p className="text-gray-700 dark:text-gray-300 mt-1">
+                        {scheme.description}
                       </p>
+                      <div className="flex items-center mt-2">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mr-2">
+                          Eligibility:
+                        </span>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          {scheme.match}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  <a
-                    href={`/government-schemes/${scheme.id}`}
-                    className="text-green-600 dark:text-green-400 hover:underline font-medium flex items-center gap-1"
-                  >
-                    View Details <ArrowRight size={16} />
-                  </a>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex justify-between">
-            <button
-              onClick={() => setAnalysisResult(null)}
-              className="border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 px-6 py-2 rounded-md font-medium"
-            >
-              Edit Information
-            </button>
-            <button className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md font-medium">
-              Download Report
-            </button>
-          </div>
+              </div>
+            )}
         </div>
       )}
     </div>
