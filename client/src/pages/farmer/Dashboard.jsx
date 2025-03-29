@@ -29,6 +29,29 @@ const getCreditScoreMessage = (score) => {
   return "You may face limited loan options. Consider improving your credit score through regular repayments.";
 };
 
+const calculateLoanEligibility = (creditScore) => {
+  return {
+    maxAmount:
+      creditScore >= 750
+        ? "₹10,00,000"
+        : creditScore >= 650
+        ? "₹7,50,000"
+        : creditScore >= 550
+        ? "₹5,00,000"
+        : "₹2,50,000",
+    interestRate:
+      creditScore >= 750
+        ? "8%"
+        : creditScore >= 650
+        ? "10%"
+        : creditScore >= 550
+        ? "12%"
+        : "14%",
+    term: "12 months",
+    status: creditScore >= 550 ? "Eligible" : "Limited Options",
+  };
+};
+
 const FarmerDashboard = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -58,23 +81,14 @@ const FarmerDashboard = () => {
 
         const data = await response.json();
 
+        // Calculate loan eligibility based on credit score
+        const creditScore = data.profile?.credit_score || 0;
+        const loanEligibility = calculateLoanEligibility(creditScore);
+
         setDashboardData({
-          creditScore: data.profile?.credit_score || 0,
+          creditScore: creditScore,
           eligibleSchemes: data.eligibleSchemes || [],
-          loanEligibility: {
-            maxAmount: data.loanEligibility
-              ? `₹${Number(data.loanEligibility.amount).toLocaleString(
-                  "en-IN"
-                )}`
-              : "₹0",
-            interestRate: data.loanEligibility
-              ? `${data.loanEligibility.interest_rate}%`
-              : "N/A",
-            term: data.loanEligibility
-              ? `${data.loanEligibility.term} months`
-              : "N/A",
-            status: data.loanEligibility?.status || "Not Available",
-          },
+          loanEligibility: loanEligibility,
           recentActivity: data.recentActivity || [],
         });
       } catch (err) {

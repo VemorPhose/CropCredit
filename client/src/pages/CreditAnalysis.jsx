@@ -109,7 +109,17 @@ const CreditAnalysis = () => {
             description: "Based on annual income and crop yield",
           },
         ],
-        eligibleSchemes: result.eligibleSchemes || [],
+        eligibleSchemes:
+          result.eligibleSchemes?.map((scheme) => ({
+            id: scheme.scheme_id || scheme.government_schemes?.id,
+            name: scheme.name || scheme.government_schemes?.name,
+            description:
+              scheme.description || scheme.government_schemes?.description,
+            match:
+              typeof scheme.eligibility_score === "number"
+                ? `${Math.round(scheme.eligibility_score)}%`
+                : scheme.match || "N/A",
+          })) || [],
       });
     } catch (error) {
       console.error("Credit analysis error:", error);
