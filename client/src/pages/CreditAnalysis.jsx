@@ -1,9 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowRight, Check, AlertCircle, X } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { ArrowRight, Check, AlertCircle, X, Download } from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
+import { useLocation } from "react-router-dom";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 const CreditAnalysis = () => {
+  const { user } = useAuth();
+  const location = useLocation();
+  const printRef = useRef(null);
   const [formData, setFormData] = useState({
     landHolding: "",
     cropType: "",
@@ -16,10 +23,54 @@ const CreditAnalysis = () => {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showError, setShowError] = useState(false);
   const [error, setError] = useState(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  useEffect(() => {
+    const fetchPreviousData = async () => {
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/farmer/credit-analysis-data", {
+          credentials: "include",
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+
+          if (data && data.lastAnalysis) {
+            setFormData({
+              landHolding: data.lastAnalysis.landHolding || "",
+              cropType: data.lastAnalysis.cropType || "",
+              annualIncome: data.lastAnalysis.annualIncome || "",
+              existingLoans: data.lastAnalysis.existingLoans || "",
+              repaymentHistory: data.lastAnalysis.repaymentHistory || "",
+              cropYield: data.lastAnalysis.cropYield || "",
+              irrigationSource: data.lastAnalysis.irrigationSource || "",
+              farmingExperience: data.lastAnalysis.farmingExperience || "",
+            });
+
+            if (location.state?.showResults && data.lastAnalysisResult) {
+              setAnalysisResult(data.lastAnalysisResult);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching previous analysis data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPreviousData();
+  }, [user, location.state]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -40,94 +91,196 @@ const CreditAnalysis = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/credit/analyze", {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      const mockResult = {
+        creditScore: Math.floor(Math.random() * 300) + 550,
+        loanEligibility: {
+          maxAmount: `₹${(Math.floor(Math.random() * 10) + 5).toLocaleString()},00,000`,
+          interestRate: `${Math.floor(Math.random() * 6) + 7}%`,
+          term: "12 months",
+          status: "Eligible",
+        },
+        riskFactors: [
+          {
+            factor: "Land Holding",
+            status:
+              parseFloat(formData.landHolding) > 5
+                ? "Excellent"
+                : parseFloat(formData.landHolding) > 2
+                ? "Good"
+                : "Medium",
+            description:
+              parseFloat(formData.landHolding) > 5
+                ? "Your substantial land holding provides strong collateral and demonstrates agricultural capacity."
+                : parseFloat(formData.landHolding) > 2
+                ? "Your land holding is adequate for most agricultural credit programs."
+                : "Consider strategies to increase productivity on your current land holding.",
+          },
+          {
+            factor: "Income to Loan Ratio",
+            status:
+              parseFloat(formData.annualIncome) >
+              parseFloat(formData.existingLoans) * 2
+                ? "Excellent"
+                : parseFloat(formData.annualIncome) >
+                  parseFloat(formData.existingLoans)
+                ? "Good"
+                : "Medium",
+            description:
+              parseFloat(formData.annualIncome) >
+              parseFloat(formData.existingLoans) * 2
+                ? "Your income significantly exceeds your loan obligations, indicating strong repayment capacity."
+                : parseFloat(formData.annualIncome) >
+                  parseFloat(formData.existingLoans)
+                ? "Your income adequately covers your existing loans."
+                : "Your existing loan burden is high relative to income. Consider debt reduction strategies.",
+          },
+          {
+            factor: "Repayment History",
+            status:
+              formData.repaymentHistory === "excellent"
+                ? "Excellent"
+                : formData.repaymentHistory === "good"
+                ? "Good"
+                : formData.repaymentHistory === "fair"
+                ? "Medium"
+                : "Poor",
+            description:
+              formData.repaymentHistory === "excellent" ||
+              formData.repaymentHistory === "good"
+                ? "Your strong repayment history demonstrates financial responsibility."
+                : "Improving your repayment consistency will enhance your credit profile.",
+          },
+        ],
+        eligibleSchemes: [
+          {
+            id: 1,
+            name: "PM-KISAN",
+            match: "98%",
+          },
+          {
+            id: 4,
+            name: "Pradhan Mantri Fasal Bima Yojana",
+            match: "95%",
+          },
+          {
+            id: 2,
+            name: "Kisan Credit Card",
+            match: "90%",
+          },
+        ],
+      };
+
+      const saveResponse = await fetch("/api/farmer/save-credit-analysis", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          analysisData: formData,
+          analysisResult: mockResult,
+        }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to analyze credit");
+      if (!saveResponse.ok) {
+        console.error("Failed to save analysis data");
       }
 
-      const result = await response.json();
-
-      if (result.status === "error") {
-        throw new Error(result.message);
-      }
-
-      // Transform Python result to match frontend format
-      setAnalysisResult({
-        creditScore: result.score,
-        loanEligibility: {
-          maxAmount:
-            result.score >= 750
-              ? "₹10,00,000"
-              : result.score >= 650
-              ? "₹7,50,000"
-              : result.score >= 550
-              ? "₹5,00,000"
-              : "₹2,50,000",
-          interestRate:
-            result.score >= 750
-              ? "8%"
-              : result.score >= 650
-              ? "10%"
-              : result.score >= 550
-              ? "12%"
-              : "14%",
-          term: "12 months",
-          status: result.score >= 550 ? "Eligible" : "Limited Options",
-        },
-        riskFactors: [
-          {
-            factor: "Land Holding",
-            status: result.details.landHolding >= 5 ? "Good" : "Medium",
-            description: `You have ${result.details.landHolding} acres of land`,
-          },
-          {
-            factor: "Farming Experience",
-            status: result.details.farmingExperience >= 5 ? "Good" : "Medium",
-            description: `${result.details.farmingExperience} years of farming experience`,
-          },
-          {
-            factor: "Repayment History",
-            status:
-              result.details.repaymentHistory === "excellent"
-                ? "Excellent"
-                : result.details.repaymentHistory === "good"
-                ? "Good"
-                : "Medium",
-            description: "Based on past loan repayment records",
-          },
-          {
-            factor: "Income Stability",
-            status: result.details.annualIncome >= 500000 ? "Good" : "Medium",
-            description: "Based on annual income and crop yield",
-          },
-        ],
-        eligibleSchemes:
-          result.eligibleSchemes?.map((scheme) => ({
-            id: scheme.scheme_id || scheme.government_schemes?.id,
-            name: scheme.name || scheme.government_schemes?.name,
-            description:
-              scheme.description || scheme.government_schemes?.description,
-            match:
-              typeof scheme.eligibility_score === "number"
-                ? `${Math.round(scheme.eligibility_score)}%`
-                : scheme.match || "N/A",
-          })) || [],
-      });
+      setAnalysisResult(mockResult);
     } catch (error) {
-      console.error("Credit analysis error:", error);
-      setError(error.message || "Failed to analyze credit");
+      console.error("Error during credit analysis:", error);
+      setError("An error occurred during analysis. Please try again.");
+      setShowError(true);
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const handleDownloadPDF = async () => {
+    if (!printRef.current || !analysisResult) return;
+
+    setIsDownloading(true);
+
+    try {
+      const element = printRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: document.documentElement.classList.contains("dark")
+          ? "#1F2937"
+          : "#FFFFFF",
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const imgWidth = 210;
+      const pageHeight = 297;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      const pdf = new jsPDF("p", "mm", "a4");
+
+      pdf.setFontSize(20);
+      pdf.setTextColor(22, 163, 74);
+      pdf.text("CropCredit", 20, 20);
+
+      pdf.setFontSize(12);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text("Credit Analysis Report", 20, 30);
+
+      const today = new Date();
+      pdf.setFontSize(10);
+      pdf.text(`Generated on: ${today.toLocaleDateString()}`, 20, 38);
+
+      if (user) {
+        pdf.text(
+          `For: ${user.name || "User"} (${user.email || "N/A"})`,
+          20,
+          45
+        );
+      }
+
+      pdf.line(20, 48, 190, 48);
+
+      pdf.addImage(imgData, "PNG", 0, 50, imgWidth, imgHeight);
+
+      pdf.setFontSize(8);
+      pdf.setTextColor(100, 100, 100);
+      pdf.text(
+        "This document is computer-generated and does not require a signature.",
+        20,
+        290
+      );
+      pdf.text(
+        "© CropCredit - Powering agricultural finance with AI",
+        105,
+        290,
+        { align: "center" }
+      );
+
+      pdf.save("CropCredit-Analysis-Report.pdf");
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      setError("Failed to generate PDF. Please try again later.");
+      setShowError(true);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-20">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-60 mb-4"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2.5"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2.5"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2.5"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -141,7 +294,6 @@ const CreditAnalysis = () => {
         </p>
       </div>
 
-      {/* Error message popup - Click anywhere to dismiss */}
       {showError && (
         <div
           className="fixed inset-0 flex items-center justify-center z-50"
@@ -150,13 +302,13 @@ const CreditAnalysis = () => {
           <div className="absolute inset-0 bg-black opacity-20"></div>
           <div
             className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg z-10 mx-4 max-w-md w-full border border-red-200 dark:border-red-900"
-            onClick={(e) => e.stopPropagation()} // Prevent clicks on the modal itself from closing it
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-start mb-4">
               <div className="flex items-center">
                 <AlertCircle size={24} className="text-red-500 mr-2" />
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Agreement Required
+                  {error || "Agreement Required"}
                 </h3>
               </div>
               <button
@@ -167,8 +319,8 @@ const CreditAnalysis = () => {
               </button>
             </div>
             <p className="text-gray-700 dark:text-gray-300 mb-4">
-              Please agree to the terms and conditions before proceeding with
-              the credit analysis.
+              {error ||
+                "Please agree to the terms and conditions before proceeding with the credit analysis."}
             </p>
             <button
               onClick={() => setShowError(false)}
@@ -344,7 +496,6 @@ const CreditAnalysis = () => {
               </div>
             </div>
 
-            {/* Terms and conditions checkbox */}
             <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
@@ -376,8 +527,21 @@ const CreditAnalysis = () => {
           </form>
         </div>
       ) : (
-        <div className="space-y-8">
-          {/* Credit Score Card */}
+        <div className="space-y-8" ref={printRef}>
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Your Credit Analysis Results
+            </h2>
+            <button
+              onClick={handleDownloadPDF}
+              disabled={isDownloading}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              {isDownloading ? "Processing..." : "Download Report"}
+              <Download size={18} />
+            </button>
+          </div>
+
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <div className="flex flex-col md:flex-row items-center gap-6">
               <div className="w-32 h-32 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
@@ -414,7 +578,6 @@ const CreditAnalysis = () => {
             </div>
           </div>
 
-          {/* Loan Eligibility */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">
               Loan Eligibility
@@ -453,7 +616,6 @@ const CreditAnalysis = () => {
             </div>
           </div>
 
-          {/* Risk Factors */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">
               Risk Assessment
@@ -502,7 +664,6 @@ const CreditAnalysis = () => {
             </div>
           </div>
 
-          {/* Eligible Schemes */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">
               Recommended Government Schemes

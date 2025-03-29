@@ -277,6 +277,7 @@ const FarmerDashboard = () => {
         <div className="mt-4 text-right">
           <Link
             to="/credit-analysis"
+            state={{ showResults: true }}
             className="text-green-600 dark:text-green-400 hover:underline font-medium"
           >
             View detailed analysis
